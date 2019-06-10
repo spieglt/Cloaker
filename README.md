@@ -5,7 +5,7 @@ Have you ever wanted to protect a file with a password and found it unnecessaril
 
 ![Demo](demo.gif)
 
-Data Loss Disclaimer: if you lose or forget your password, ~your data cannot be recovered!~ Use a password manager or another secure form of backup. Cloaker uses stream encryption from the sodium-oxide Rust wrapper of libsodium (xchacha20poly1305).
+**Data Loss Disclaimer:** if you lose or forget your password, **your data cannot be recovered!** Use a password manager or another secure form of backup. Cloaker uses stream encryption from the sodium-oxide Rust wrapper of libsodium (xchacha20poly1305).
 
 # Compilation instructions:
 `cd gui_adapter && cargo build`. Then...
