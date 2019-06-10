@@ -1,0 +1,10 @@
+[package]
+name = "cloaker_cli"
+version = "0.1.0"
+authors = ["Theron <tspiegl@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+cloaker = { path = "../core" }
+rpassword = "3.0.2"
+sodiumoxide = "0.2.2"
