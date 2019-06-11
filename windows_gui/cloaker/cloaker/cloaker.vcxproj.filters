@@ -39,6 +39,9 @@
     <ClInclude Include="PasswordConfirmDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="adapter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cloaker.cpp">

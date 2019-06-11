@@ -199,6 +199,7 @@
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="adapter.h" />
     <ClInclude Include="cloaker.h" />
     <ClInclude Include="cloakerDlg.h" />
     <ClInclude Include="DropTarget.h" />

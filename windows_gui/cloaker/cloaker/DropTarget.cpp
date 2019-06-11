@@ -6,21 +6,9 @@
 #include "DropTarget.h"
 #include "PasswordDlg.h"
 #include "PasswordConfirmDlg.h"
+#include "adapter.h"
 #include "afxdialogex.h"
 #include <string.h>
-
-// for functions rust lib references
-#pragma comment(lib, "userenv.lib")
-#pragma comment(lib, "ws2_32.lib")
-
-// rust library function definitions
-extern "C" void* makeConfig(CHAR, CHAR*, CHAR*);
-extern "C" CHAR* start(void*);
-extern "C" void destroyConfig(void*);
-extern "C" void destroyCString(CHAR*);
-
-// number of files that can be dragged at once
-#define FILELIMIT 1000
 
 enum Mode {
 	Encrypt = 0,
@@ -81,7 +69,7 @@ void CDropTarget::OnDropFiles(HDROP hDropInfo)
 	this->GetDlgItem(IDC_DROPTEXT2)->ShowWindow(SW_HIDE);
 	this->GetDlgItem(IDC_DROPTEXT3)->ShowWindow(SW_SHOW);
 
-	// make sure only 1 file is being decrypted
+	// only one file at a time
 	if (numFiles > 1) {
 		if (mode == Encrypt) {
 			MessageBox(L"To avoid leaving unencrypted partial files in case of program failure, only one file can be encrypted at a time. To encrypt multiple files, please wrap them in a .zip file or similar archive/compression format first.", MB_OK);
