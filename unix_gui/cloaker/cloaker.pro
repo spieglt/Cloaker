@@ -43,12 +43,12 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 
-unix: LIBS += -L$$PWD/../../gui_adapter/target/debug/ -ladapter
+unix: LIBS += -L$$PWD/../../gui_adapter/target/release/ -ladapter
 
-INCLUDEPATH += $$PWD/../../gui_adapter/target/debug
-DEPENDPATH += $$PWD/../../gui_adapter/target/debug
+INCLUDEPATH += $$PWD/../../gui_adapter/target/release
+DEPENDPATH += $$PWD/../../gui_adapter/target/release
 
-unix: PRE_TARGETDEPS += $$PWD/../../gui_adapter/target/debug/libadapter.a
+unix: PRE_TARGETDEPS += $$PWD/../../gui_adapter/target/release/libadapter.a
 
 DISTFILES +=
 
