@@ -49,3 +49,7 @@ INCLUDEPATH += $$PWD/../../gui_adapter/target/debug
 DEPENDPATH += $$PWD/../../gui_adapter/target/debug
 
 unix: PRE_TARGETDEPS += $$PWD/../../gui_adapter/target/debug/libadapter.a
+
+DISTFILES +=
+
+ICON = macCloakerLogo.icns

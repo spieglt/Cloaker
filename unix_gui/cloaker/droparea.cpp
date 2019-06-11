@@ -83,7 +83,7 @@ void DropArea::dropEvent(QDropEvent *event)
     bool okPw, okConfirm;
     int mode = this->encrypting? 0 : 1;
     void *config = nullptr;
-    QString ret_msg;
+    char *ret_msg = nullptr;
     QMessageBox msgBox;
 
     if (mimeData->hasUrls()) {
@@ -142,12 +142,14 @@ PasswordPrompts:
         msgBox.exec();
         goto CleanUp;
     }
-
-    msgBox.setText(start(config));
+    ret_msg = start(config);
+    msgBox.setText(ret_msg);
     msgBox.exec();
     this->clear();
 
 CleanUp:
+    destroyConfig(config);
+    destroyCString(ret_msg);
     setBackgroundRole(QPalette::Dark);
     event->acceptProposedAction();
 }
