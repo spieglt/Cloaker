@@ -12,14 +12,11 @@ Have you ever wanted to protect a file with a password and found it unnecessaril
 
 **Windows**: Open `windows_gui\cloaker\cloaker.sln` in Visual Studio, make sure architecture is set to x64, and build.
 
-**Mac/Linux**: Open `unix_gui/cloaker/cloaker.pro` in Qt Creator (Qt 5.12), make sure kit is 5.12.0 64bit, and build.*
-
-
-# Issues:
-*When compiling on Linux for the first time, it will fail with an undefined symbol error. To resolve, go into `linux_gui/build-cloaker-...` (which won't exist till you've tried to build), open the Makefile, find the line beginning with `LIBS`, and add `-ldl` to the end of the line. If you know a better way to resolve this error, please let me know. I don't know how to add that dependency through Qt Creator.
-
+**Mac/Linux**: Open `unix_gui/cloaker/cloaker.pro` in Qt Creator (Qt 5.12), make sure kit is 5.12.0 64bit, and build.
 
 # Planned features:
 - Progress indicator/speed staticstics?
 - Use a real flag parser for the CLI
 - Mobile version someday?
+
+# Issues:
