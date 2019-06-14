@@ -45,6 +45,8 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 unix: LIBS += -L$$PWD/../../gui_adapter/target/release/ -ladapter
 
+unix: LIBS += -ldl
+
 INCLUDEPATH += $$PWD/../../gui_adapter/target/release
 DEPENDPATH += $$PWD/../../gui_adapter/target/release
 
