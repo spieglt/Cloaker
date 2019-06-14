@@ -12,7 +12,7 @@ Have you ever wanted to protect a file with a password and found it unnecessaril
 
 **Windows**: Open `windows_gui\cloaker\cloaker.sln` in Visual Studio, make sure architecture is set to x64, and build.
 
-**Mac/Linux**: Open `unix_gui/cloaker/cloaker.pro` in Qt Creator (Qt 5.12), make sure kit is 5.12.0 64bit, and build.
+**Mac/Linux**: Open `unix_gui/cloaker/cloaker.pro` in Qt Creator (Qt 5.12), make sure kit is 64bit, and build.
 
 # Planned features:
 - Progress indicator/speed staticstics?
