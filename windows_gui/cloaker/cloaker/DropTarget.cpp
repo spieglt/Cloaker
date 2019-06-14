@@ -96,6 +96,10 @@ PasswordPrompts:
 	password = pwBox->m_password;
 
 	if (mode == Encrypt) {
+		if (password.GetLength() < 10) {
+			MessageBox(L"Password must be at least 10 characters.", MB_OK);
+			goto PasswordPrompts;
+		}
 		ret = pwConfirmBox->DoModal();
 		if (ret != IDOK) {
 			goto CleanUp;
