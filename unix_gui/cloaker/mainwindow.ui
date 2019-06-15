@@ -92,7 +92,7 @@
      <string>1. Select mode above
 
 
-2. Drop files here</string>
+2. Drop a file here</string>
     </property>
     <property name="alignment">
      <set>Qt::AlignCenter</set>
