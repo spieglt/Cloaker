@@ -64,9 +64,8 @@ pub fn encrypt(in_file: &mut File, out_file: &mut File, password: &str)
                 continue
             },
             Err(e) => Err(e)?,
-            _ => (), // reached EOF
+            _ => break, // reached EOF
         }
-        break
     }
 
     Ok(())
@@ -103,7 +102,7 @@ pub fn decrypt(in_file: &mut File, out_file: &mut File, password: &str)
                 continue
             },
             Err(e) => return Err(Box::new(e)),
-            _ => break, // reached EOF
+            _ => return Err(CoreError::new("Decryption error"))?, // reached EOF
         }
     }
     Ok(())

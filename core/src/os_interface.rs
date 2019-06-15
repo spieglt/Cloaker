@@ -45,7 +45,7 @@ pub fn main_routine(c: &Config) -> Result<String, Box<Error>> {
             };
         },
         Mode::Decrypt => {
-            if &c.filename[c.filename.len()-FILE_EXTENSION.len()..] == FILE_EXTENSION {
+            if c.filename.len() > FILE_EXTENSION.len() && (&c.filename[c.filename.len()-FILE_EXTENSION.len()..] == FILE_EXTENSION) {
                 out_filename = c.filename[..c.filename.len()-FILE_EXTENSION.len()].to_string();
             } else {
                 out_filename = prepend("decrypted_", &c.filename)
