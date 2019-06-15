@@ -17,6 +17,8 @@ public:
 
 private slots:
 
+    void on_actionAbout_Cloaker_triggered();
+
 private:
     Ui::MainWindow *ui;
 };

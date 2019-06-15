@@ -112,11 +112,16 @@ void DropArea::dropEvent(QDropEvent *event)
     }
 
 PasswordPrompts:
-    password = QInputDialog::getText(this, "Enter password", "", QLineEdit::Password, "", &okPw);
+    password = QInputDialog::getText(this, "Enter password", "Must be at least 10 characters", QLineEdit::Password, "", &okPw);
     if (!okPw) {
         goto CleanUp;
     }
     if (this->encrypting) {
+        if (password.length() < 10) {
+            msgBox.setText("Password must be at least 10 characters.");
+            msgBox.exec();
+            goto PasswordPrompts;
+        }
         passwordConfirm = QInputDialog::getText(this, "Confirm password", "", QLineEdit::Password, "", &okConfirm);
         if (!okConfirm) {
             goto CleanUp;
