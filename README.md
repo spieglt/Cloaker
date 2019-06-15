@@ -18,6 +18,8 @@ Have you ever wanted to protect a file with a password and found it unnecessaril
 **Mac/Linux**: Open `unix_gui/cloaker/cloaker.pro` in Qt Creator (Qt 5.12), make sure kit is 64bit, and build.
 
 # Planned features:
+- Add file signature to eliminate the need for encrypt and decrypt buttons (if backwards compatibility can be maintained)
+- Let user select output file location to allow decryption to ramdisk
 - Progress indicator/speed staticstics?
 - CLI: add password length requirement and a real flag parser
 - Mobile version someday?
