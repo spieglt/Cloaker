@@ -1,4 +1,7 @@
 # Cloaker
+
+Ready-to-use downloads on the [Releases](https://github.com/spieglt/Cloaker/releases) page
+
 ### Very simple cross-platform file encryption
 
 Have you ever wanted to protect a file with a password and found it unnecessarily difficult to do so? Cloaker aims to provide the most straightforward file encryption possible. Just drop a file onto the window and set a password. To decrypt, select "Decrypt", drop the encrypted file on the window, and enter the password.
