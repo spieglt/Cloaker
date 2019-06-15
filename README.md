@@ -20,3 +20,9 @@ Have you ever wanted to protect a file with a password and found it unnecessaril
 - Mobile version someday?
 
 # Issues:
+
+If you've used Cloaker, please send me feedback! Thank you for your interest!
+
+**You might also like:** 
+https://github.com/spieglt/flyingcarpet
+
