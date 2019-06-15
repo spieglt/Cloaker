@@ -1,7 +1,7 @@
 # Cloaker
 ### Very simple cross-platform file encryption
 
-Have you ever wanted to protect a file with a password and found it unnecessarily difficult to do so? Cloaker aims to be the most straightforward file encrypter possible. Just drop a file onto the window and set a password. To decrypt, select "Decrypt", drop the encrypted file on the window, and enter the password.
+Have you ever wanted to protect a file with a password and found it unnecessarily difficult to do so? Cloaker aims to provide the most straightforward file encryption possible. Just drop a file onto the window and set a password. To decrypt, select "Decrypt", drop the encrypted file on the window, and enter the password.
 
 ![Demo](demo.gif)
 
@@ -16,7 +16,7 @@ Have you ever wanted to protect a file with a password and found it unnecessaril
 
 # Planned features:
 - Progress indicator/speed staticstics?
-- Use a real flag parser for the CLI
+- CLI: add password length requirement and a real flag parser
 - Mobile version someday?
 
 # Issues:
