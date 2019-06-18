@@ -9,3 +9,10 @@ extern "C" void* makeConfig(CHAR, CHAR*, CHAR*);
 extern "C" CHAR* start(void*);
 extern "C" void destroyConfig(void*);
 extern "C" void destroyCString(CHAR*);
+
+// determines whether file is cloaked already
+// returns 0 for encrypt and 1 for decrypt
+INT getMode(WCHAR*);
+
+// presents save dialog and returns output file path
+CString saveDialog(WCHAR* inFile);

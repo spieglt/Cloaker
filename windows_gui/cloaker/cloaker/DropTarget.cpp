@@ -60,9 +60,7 @@ void CDropTarget::OnDropFiles(HDROP hDropInfo)
 	WCHAR filenameBuf[MAX_PATH];
 	UINT numFiles = DragQueryFile(hDropInfo, 0xFFFFFFFF, NULL, NULL);
 	UINT copied = DragQueryFile(hDropInfo, 0, filenameBuf, MAX_PATH);
-
-	// get mode
-	CHAR mode = GetParent()->IsDlgButtonChecked(IDC_ENCRYPT) ? Encrypt : Decrypt;
+	CString outCS;
 
 	// change text
 	this->GetDlgItem(IDC_DROPTEXT)->ShowWindow(SW_HIDE);
@@ -71,19 +69,20 @@ void CDropTarget::OnDropFiles(HDROP hDropInfo)
 
 	// only one file at a time
 	if (numFiles > 1) {
-		if (mode == Encrypt) {
-			MessageBox(L"To avoid leaving unencrypted partial files in case of program failure, only one file can be encrypted at a time. To encrypt multiple files, please wrap them in a .zip file or similar archive/compression format first.", MB_OK);
-			goto CleanUp;
-		} else if (mode == Decrypt) {
-			MessageBox(L"Only one file at a time can be decrypted.", L"Error", MB_OK);
-			goto CleanUp;
-		}
+		MessageBox(L"To avoid leaving unencrypted partial files in case of program failure, only one file can be processed at a time. To encrypt multiple files, please wrap them in a .zip file or similar archive/compression format first.", MB_OK);
+		goto CleanUp;
 	}
 	// no folders
 	if (GetFileAttributes(filenameBuf) == FILE_ATTRIBUTE_DIRECTORY) {
 		MessageBox(L"Must select file. To encrypt a folder, please wrap it a .zip file or similar archive/compression format first.");
 		goto CleanUp;
 	}
+
+	// get mode
+	//CHAR mode = GetParent()->IsDlgButtonChecked(IDC_ENCRYPT) ? Encrypt : Decrypt;
+	CHAR mode = getMode(filenameBuf);
+
+
 
 PasswordPrompts:
 	pwBox->m_password = "";
@@ -113,6 +112,9 @@ PasswordPrompts:
 			}
 		}
 	}
+
+	// get output filepath
+	outCS = *saveDialog(filenameBuf);
 
 	// convert password and filename to utf8 before handing to rust
 	const size_t pwSize = (pwBox->m_password.GetLength() + 1) * 2;
