@@ -5,7 +5,7 @@
 #pragma comment(lib, "ws2_32.lib")
 
 // rust library function definitions
-extern "C" void* makeConfig(CHAR, CHAR*, CHAR*);
+extern "C" void* makeConfig(CHAR, CHAR*, CHAR*, CHAR*);
 extern "C" CHAR* start(void*);
 extern "C" void destroyConfig(void*);
 extern "C" void destroyCString(CHAR*);
@@ -15,4 +15,6 @@ extern "C" void destroyCString(CHAR*);
 INT getMode(WCHAR*);
 
 // presents save dialog and returns output file path
-CString saveDialog(WCHAR* inFile);
+CString saveDialog(WCHAR*, CHAR);
+
+BOOL endsWithExt(WCHAR *s);

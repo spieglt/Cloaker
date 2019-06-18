@@ -10,6 +10,7 @@ use sodiumoxide::crypto::secretstream::
 use sodiumoxide::crypto::secretstream::xchacha20poly1305::{Header, Key};
 
 const CHUNKSIZE: usize = 4096;
+const SIGNATURE: [u8; 4] = [0xC1, 0x0A, 0x4B, 0xED];
 
 #[derive(Debug)]
 struct CoreError {
@@ -37,6 +38,9 @@ pub fn encrypt(in_file: &mut File, out_file: &mut File, password: &str)
     let mut buf = [0; CHUNKSIZE];
     let mut bytes_left = in_file.metadata()?.len();    
     
+    // write file signature
+    out_file.write(&SIGNATURE)?;
+
     let salt = pwhash::gen_salt();
     out_file.write(&salt.0)?;
 

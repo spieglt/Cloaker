@@ -5,7 +5,7 @@ use std::ptr::null_mut;
 use cloaker::{Config, Mode, main_routine};
 
 #[no_mangle]
-pub extern fn makeConfig(mode: u8, password: *mut c_char, filename: *mut c_char) -> *mut Config {
+pub extern fn makeConfig(mode: u8, password: *mut c_char, filename: *mut c_char, out_filename: *mut c_char) -> *mut Config {
     let m = match mode {
         0 => Mode::Encrypt,
         1 => Mode::Decrypt,
@@ -19,17 +19,21 @@ pub extern fn makeConfig(mode: u8, password: *mut c_char, filename: *mut c_char)
         Ok(s) => s,
         Err(_) => return null_mut(),
     };
-    Box::into_raw(Box::new(Config::new(m, p, f)))
+    let o = match c_to_rust_string(out_filename) {
+        Ok(s) => s,
+        Err(_) => return null_mut(),
+    };
+    Box::into_raw(Box::new(Config::new(m, p, f, o)))
 }
 
 #[no_mangle]
 pub extern fn start(ptr: *mut Config) -> *mut c_char {
     let config = unsafe { &mut *ptr };
     let msg = match main_routine(config) {
-        Ok(filename) => {
+        Ok(_) => {
             match config.mode {
-                Mode::Encrypt => format!("Success! Encrypted file {} is alongside the original.", filename),
-                Mode::Decrypt => format!("Success! Decrypted file {} is alongside the original.", filename),
+                Mode::Encrypt => format!("Success! File {} has been encrypted.", config.out_file),
+                Mode::Decrypt => format!("Success! File {} has been decrypted.", config.out_file),
             }
         },
         Err(e) => format!("{}", e),

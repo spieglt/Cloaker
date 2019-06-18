@@ -79,10 +79,7 @@ void CDropTarget::OnDropFiles(HDROP hDropInfo)
 	}
 
 	// get mode
-	//CHAR mode = GetParent()->IsDlgButtonChecked(IDC_ENCRYPT) ? Encrypt : Decrypt;
 	CHAR mode = getMode(filenameBuf);
-
-
 
 PasswordPrompts:
 	pwBox->m_password = "";
@@ -114,24 +111,29 @@ PasswordPrompts:
 	}
 
 	// get output filepath
-	outCS = *saveDialog(filenameBuf);
+	outCS = *saveDialog(filenameBuf, mode);
 
-	// convert password and filename to utf8 before handing to rust
+	// convert password, filename, and outFilename to utf8 before handing to rust
 	const size_t pwSize = (pwBox->m_password.GetLength() + 1) * 2;
 	char *pw = new char[pwSize];
-	size_t convertedChars = 0;
-	wcstombs_s(&convertedChars, pw, pwSize, pwBox->m_password, _TRUNCATE);
+	size_t convChars = 0;
+	wcstombs_s(&convChars, pw, pwSize, pwBox->m_password, _TRUNCATE);
 
 	// new buf for filename needs to have 2 bytes for every wchar in case
 	size_t fnSize = MAX_PATH * 2;
 	char *fn = new char[fnSize];
-	wcstombs_s(&convertedChars, fn, fnSize, filenameBuf, _TRUNCATE);
+	wcstombs_s(&convChars, fn, fnSize, filenameBuf, _TRUNCATE);
+
+	const size_t ofSize = (outCS.GetLength() + 1) * 2;
+	char *of = new char[pwSize];
+	wcstombs_s(&convChars, of, ofSize, outCS, _TRUNCATE);
 
 	// pointer to rust struct
-	config = makeConfig(mode, pw, fn);
+	config = makeConfig(mode, pw, fn, of);
 	ret_val = start(config);
 	delete pw;
 	delete fn;
+	delete of;
 	if (ret_val == nullptr) {
 		MessageBox(L"Could not start transfer, possibly due to malformed password or filename.", L"Error", MB_OK);
 		goto CleanUp;
