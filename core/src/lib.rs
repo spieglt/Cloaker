@@ -36,7 +36,7 @@ pub fn encrypt(in_file: &mut File, out_file: &mut File, password: &str)
     // change to vec to allocate on heap and have larger chunksize
     // was overflowing stack when set to 1_000_000
     let mut buf = [0; CHUNKSIZE];
-    let mut bytes_left = in_file.metadata()?.len();    
+    let mut bytes_left = in_file.metadata()?.len();
     
     // write file signature
     out_file.write(&SIGNATURE)?;
@@ -77,6 +77,12 @@ pub fn encrypt(in_file: &mut File, out_file: &mut File, password: &str)
 
 pub fn decrypt(in_file: &mut File, out_file: &mut File, password: &str)
     -> Result<(), Box<error::Error>> {
+
+    // make sure file is at least prefix + salt + header
+    if !(in_file.metadata()?.len() > (pwhash::SALTBYTES + HEADERBYTES + SIGNATURE.len()) as u64) {
+        return Err(CoreError::new("File not big enough to have been encrypted"))?;
+    }
+    // TODO: read file signature if present
 
     let mut salt = [0u8; pwhash::SALTBYTES];
     in_file.read_exact(&mut salt)?;

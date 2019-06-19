@@ -23,48 +23,13 @@
    <bool>false</bool>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <widget class="QGroupBox" name="groupBox">
+   <widget class="DropArea" name="label">
     <property name="geometry">
      <rect>
       <x>10</x>
       <y>10</y>
       <width>281</width>
-      <height>67</height>
-     </rect>
-    </property>
-    <property name="title">
-     <string>Mode</string>
-    </property>
-    <property name="alignment">
-     <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-    </property>
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <item>
-      <widget class="QRadioButton" name="radioButton">
-       <property name="text">
-        <string>Encrypt</string>
-       </property>
-       <property name="checked">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QRadioButton" name="radioButton_2">
-       <property name="text">
-        <string>Decrypt</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </widget>
-   <widget class="DropArea" name="label">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>80</y>
-      <width>281</width>
-      <height>191</height>
+      <height>261</height>
      </rect>
     </property>
     <property name="sizePolicy">
@@ -89,10 +54,9 @@
      <number>2</number>
     </property>
     <property name="text">
-     <string>1. Select mode above
+     <string>Drop a normal file here to encrypt
 
-
-2. Drop a file here</string>
+or an encrypted file to decrypt</string>
     </property>
     <property name="alignment">
      <set>Qt::AlignCenter</set>
@@ -105,7 +69,7 @@
      <x>0</x>
      <y>0</y>
      <width>300</width>
-     <height>22</height>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuAbout">
@@ -135,38 +99,5 @@
   </customwidget>
  </customwidgets>
  <resources/>
- <connections>
-  <connection>
-   <sender>radioButton</sender>
-   <signal>clicked()</signal>
-   <receiver>label</receiver>
-   <slot>setEncrypt()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>76</x>
-     <y>60</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>83</x>
-     <y>133</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>radioButton_2</sender>
-   <signal>clicked()</signal>
-   <receiver>label</receiver>
-   <slot>setDecrypt()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>227</x>
-     <y>56</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>230</x>
-     <y>122</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
 </ui>

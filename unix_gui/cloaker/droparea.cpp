@@ -62,7 +62,6 @@ DropArea::DropArea(QWidget *parent)
     : QLabel(parent)
 {
     setBackgroundRole(QPalette::Dark);
-    this->encrypting = true;
 }
 
 void DropArea::dragEnterEvent(QDragEnterEvent *event)
@@ -79,9 +78,9 @@ void DropArea::dragMoveEvent(QDragMoveEvent *event)
 void DropArea::dropEvent(QDropEvent *event)
 {
     const QMimeData *mimeData = event->mimeData();
-    QString filename, password, passwordConfirm;
+    QString filename, outFilename, password, passwordConfirm;
     bool okPw, okConfirm;
-    int mode = this->encrypting? 0 : 1;
+    Mode mode = Encrypt;
     void *config = nullptr;
     char *ret_msg = nullptr;
     QMessageBox msgBox;
@@ -89,12 +88,7 @@ void DropArea::dropEvent(QDropEvent *event)
     if (mimeData->hasUrls()) {
         QList<QUrl> urlList = mimeData->urls();
         if (urlList.size() > 1) {
-            if (this->encrypting) {
-                msgBox.setText("To avoid leaving unencrypted partial files in case of program failure, only one file can be encrypted at a time. \
-                    To encrypt multiple files, please wrap them in a .zip file or similar archive/compression format first.");
-            } else {
-                msgBox.setText("Only one file at a time can be decrypted");
-            }
+            msgBox.setText("Only one file at a time can be decrypted");
             msgBox.exec();
             goto CleanUp;
         }
@@ -111,12 +105,14 @@ void DropArea::dropEvent(QDropEvent *event)
         goto CleanUp;
     }
 
+    mode = getMode(filename);
+
 PasswordPrompts:
-    password = QInputDialog::getText(this, "Enter password", "Must be at least 10 characters", QLineEdit::Password, "", &okPw);
-    if (!okPw) {
-        goto CleanUp;
-    }
-    if (this->encrypting) {
+    if (mode == Encrypt) {
+        password = QInputDialog::getText(this, "Enter password", "Must be at least 10 characters", QLineEdit::Password, "", &okPw);
+        if (!okPw) {
+            goto CleanUp;
+        }
         if (password.length() < 10) {
             msgBox.setText("Password must be at least 10 characters.");
             msgBox.exec();
@@ -138,10 +134,17 @@ PasswordPrompts:
                 goto CleanUp;
             }
         }
+    } else if (mode == Decrypt) {
+        password = QInputDialog::getText(this, "Decrypt password", "Enter the password that was used to encrypt this file", QLineEdit::Password, "", &okPw);
+        if (!okPw) {
+            goto CleanUp;
+        }
     }
 
+    outFilename = saveDialog(filename, mode);
+
     setText("Working...");
-    config = makeConfig(mode, password.toUtf8().data(), filename.toUtf8().data());
+    config = makeConfig(mode, password.toUtf8().data(), filename.toUtf8().data(), outFilename.toUtf8().data());
     if (config == nullptr) {
         msgBox.setText("Could not start transfer, possibly due to malformed password or filename.");
         msgBox.exec();
@@ -169,14 +172,4 @@ void DropArea::clear()
 {
     setText(tr("1. Select mode above\n\n\n2. Drop files here"));
     setBackgroundRole(QPalette::Dark);
-}
-
-void DropArea::setEncrypt()
-{
-    this->encrypting = true;
-}
-
-void DropArea::setDecrypt()
-{
-    this->encrypting = false;
 }

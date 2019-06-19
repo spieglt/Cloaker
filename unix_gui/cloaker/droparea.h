@@ -64,11 +64,8 @@ class DropArea : public QLabel
 
 public:
     explicit DropArea(QWidget *parent = nullptr);
-    bool encrypting; // mode flag
 
 public slots:
-    void setEncrypt();
-    void setDecrypt();
     void clear();
 
 signals:

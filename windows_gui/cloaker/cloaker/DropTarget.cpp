@@ -111,7 +111,7 @@ PasswordPrompts:
 	}
 
 	// get output filepath
-	outCS = *saveDialog(filenameBuf, mode);
+	outCS = saveDialog(filenameBuf, mode);
 
 	// convert password, filename, and outFilename to utf8 before handing to rust
 	const size_t pwSize = (pwBox->m_password.GetLength() + 1) * 2;

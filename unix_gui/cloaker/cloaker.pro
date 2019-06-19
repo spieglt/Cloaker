@@ -27,7 +27,8 @@ CONFIG += c++11
 SOURCES += \
         main.cpp \
         mainwindow.cpp \
-    droparea.cpp
+    droparea.cpp \
+    adapter.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -55,3 +56,11 @@ unix: PRE_TARGETDEPS += $$PWD/../../gui_adapter/target/release/libadapter.a
 DISTFILES +=
 
 ICON = macCloakerLogo.icns
+
+win32: LIBS += -L$$PWD/../../gui_adapter/target/x86_64-pc-windows-gnu/release/ -ladapter -lws2_32 -luserenv
+
+INCLUDEPATH += $$PWD/../../gui_adapter/target/x86_64-pc-windows-gnu/release
+DEPENDPATH += $$PWD/../../gui_adapter/target/x86_64-pc-windows-gnu/release
+
+win32:!win32-g++: PRE_TARGETDEPS += $$PWD/../../gui_adapter/target/x86_64-pc-windows-gnu/release/adapter.lib
+else:win32-g++: PRE_TARGETDEPS += $$PWD/../../gui_adapter/target/x86_64-pc-windows-gnu/release/libadapter.a

@@ -1,9 +1,6 @@
-use crate::CoreError;
+
 use std::error::Error;
 use std::fs::{File, remove_file};
-use std::path::*;
-
-const FILE_EXTENSION: &str = ".cloaker";
 
 #[derive(Debug)]
 pub enum Mode {
