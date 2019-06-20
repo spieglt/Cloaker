@@ -92,7 +92,7 @@ pub fn decrypt(in_file: &mut File, out_file: &mut File, password: &str)
     if &signature == &SIGNATURE { // if the signature is present, read into all of salt
         in_file.read_exact(&mut salt)?;
     } else { // or take the bytes from signature and read the rest from file
-        salt.copy_from_slice(&signature);
+        &mut salt[..4].copy_from_slice(&signature);
         in_file.read_exact(&mut salt[4..])?;
     }
     let salt = pwhash::Salt(salt);
