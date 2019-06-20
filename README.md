@@ -1,10 +1,11 @@
 # Cloaker
 
 Ready-to-use downloads on the [Releases](https://github.com/spieglt/Cloaker/releases) page
+Version 2.0 improvements: removed Encrypt and Decrypt buttons, it now automatically detects mode.
 
 ### Very simple cross-platform file encryption
 
-Have you ever wanted to protect a file with a password and found it unnecessarily difficult to do so? Cloaker aims to provide the most straightforward file encryption possible. Just drop a file onto the window and set a password. To decrypt, select "Decrypt", drop the encrypted file on the window, and enter the password.
+Have you ever wanted to protect a file with a password and found it unnecessarily difficult to do so? Cloaker aims to provide the most straightforward file encryption possible. Just drop a file onto the window, set a password, and choose where to save it. To decrypt, drop the encrypted file on the window, enter the password, and choose the output location. (Tip: decrypt to a ramdisk to avoid touching the filesystem.)
 
 ![Demo](demo.gif)
 
@@ -25,10 +26,8 @@ $ make
 Then go to Qt Creator settings, add a new version of Qt, point to `~/qt-static/qtbase/bin/qmake`, then add a new "Kit" that points to this Qt version, and build with that kit selected.
 
 # Planned features:
-- Add file signature to eliminate the need for encrypt and decrypt buttons (if backwards compatibility can be maintained)
-- Let user select output file location to allow decryption to ramdisk
 - Progress indicator/speed staticstics?
-- CLI: add password length requirement and a real flag parser
+- CLI: add password length requirement, and a real flag parser with an output parameter
 - Mobile version someday?
 
 # Issues:
