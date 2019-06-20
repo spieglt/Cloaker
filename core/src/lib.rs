@@ -89,7 +89,7 @@ pub fn decrypt(in_file: &mut File, out_file: &mut File, password: &str)
     let mut signature = [0u8; 4];
 
     in_file.read_exact(&mut signature)?;
-    if &signature == &SIGNATURE { // if the signature is present, read into all of salt
+    if signature == SIGNATURE { // if the signature is present, read into all of salt
         in_file.read_exact(&mut salt)?;
     } else { // or take the bytes from signature and read the rest from file
         &mut salt[..4].copy_from_slice(&signature);
