@@ -31,6 +31,7 @@ $ make
 ```
 > cd c:\; mkdir qt-static; cd qt-static
 > C:\Qt\5.12.0\Src\configure.bat -prefix C:\qt-static\5.12.0 -static -release -opensource -confirm-license -skip multimedia -no-compile-examples -nomake examples -no-openssl -no-opengl
+> mingw32-make.exe
 ```
 
 Then run `rustup toolchain install stable-x86_64-pc-windows-gnu` and `rustup set default-host x86_64-pc-windows-gnu`. (Linking Qt statically requires compiling with MinGW, which requires linking against Rust libs compiled with MinGW.) Then `cd` to `cloaker\adapter`, delete the `target` directory, run `cargo build --release` again, go into the new `target\release` directory, and rename `adapter.lib` to `libadapter.a`. (https://github.com/rust-lang/rust/issues/43749)
