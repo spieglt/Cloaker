@@ -1,11 +1,11 @@
 # Cloaker
 
 Ready-to-use downloads on the [Releases](https://github.com/spieglt/Cloaker/releases) page
-Version 2.0 improvements: removed Encrypt and Decrypt buttons, it now automatically detects mode.
+Version 2.0 improvements: added automatic mode detection, removed Encrypt and Decrypt buttons, deleted Windows MFC GUI in favor of statically-linked Qt on all 3 platforms.
 
 ### Very simple cross-platform file encryption
 
-Have you ever wanted to protect a file with a password and found it unnecessarily difficult to do so? Cloaker aims to provide the most straightforward file encryption possible. Just drop a file onto the window, set a password, and choose where to save it. To decrypt, drop the encrypted file on the window, enter the password, and choose the output location. (Tip: decrypt to a ramdisk to avoid touching the filesystem.)
+Have you ever wanted to protect a file with a password and found it unnecessarily difficult to do so? Cloaker aims to provide the most straightforward file encryption possible. Just drop a file onto the window, set a password, and choose where to save it. To decrypt, drop the encrypted file on the window, enter the password, and choose the output location. (Tip: decrypt to a ramdisk for temporary use to avoid writing data to permanent storage.)
 
 ![Demo](demo.gif)
 
@@ -20,14 +20,14 @@ If you want to make a distributable on...
 
 **Mac:** use `macqtdeploy` with the built .app bundle as argument. 
 
-**Linux:** compile a static version of Qt with something like:
+**Linux only:** compile a static version of Qt with something like:
 ```
 $ mkdir ~/qt-static && cd ~/qt-static
 $ ~/Qt/5.12.3/Src/configure -prefix ~/qt-static/5.12.3 -static -release -opensource -confirm-license -skip multimedia -no-compile-examples -nomake examples -no-openssl -no-libpng -skip wayland -qt-xcb
 $ make
 ```
 
-**Windows:** compile Qt statically with something like:
+**Windows only:** compile Qt statically with something like:
 ```
 > cd c:\; mkdir qt-static; cd qt-static
 > C:\Qt\5.12.0\Src\configure.bat -prefix C:\qt-static\5.12.0 -static -release -opensource -confirm-license -skip multimedia -no-compile-examples -nomake examples -no-openssl -no-opengl
@@ -45,10 +45,9 @@ Then run `rustup toolchain install stable-x86_64-pc-windows-gnu` and `rustup set
 
 # Issues:
 - Tell me about them
+- Backward compatibility note: to decrypt a file made with version 1.0 or 1.1 of Cloaker (with Encrypt and Decrypt buttons), the filename must end with the ".cloaker" extension. Files encrypted with later versions are not subject to this restriction.
 
 If you've used Cloaker, please send me feedback and thank you for your interest!
 
-**You might also like:** 
-
-https://github.com/spieglt/flyingcarpet
+**You might also like:** https://github.com/spieglt/flyingcarpet
 
