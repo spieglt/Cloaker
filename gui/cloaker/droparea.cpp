@@ -78,11 +78,8 @@ void DropArea::dragMoveEvent(QDragMoveEvent *event)
 void DropArea::dropEvent(QDropEvent *event)
 {
     const QMimeData *mimeData = event->mimeData();
-    QString filename, outFilename, password, passwordConfirm;
-    bool okPw, okConfirm;
-    Mode mode = Encrypt;
-    void *config = nullptr;
-    char *ret_msg = nullptr;
+    QString filename, outFilename;
+    QString password;
     QMessageBox msgBox;
 
     if (mimeData->hasUrls()) {
@@ -90,76 +87,71 @@ void DropArea::dropEvent(QDropEvent *event)
         if (urlList.size() > 1) {
             msgBox.setText("Only one file at a time can be decrypted");
             msgBox.exec();
-            goto CleanUp;
+            this->setBackgroundRole(QPalette::Dark);
+            event->acceptProposedAction();
+            return;
         }
-        filename = urlList.at(0).path();
+        filename = urlList.at(0).toLocalFile();
         if (!QFileInfo(filename).isFile()) {
-            msgBox.setText("Only single files can be processed. \
-                To encrypt a folder, please wrap it a .zip file or similar archive/compression format first.");
+            msgBox.setText("Only single files can be processed. "
+                "To encrypt a folder, please wrap it a .zip file or similar archive/compression format first.");
             msgBox.exec();
-            goto CleanUp;
+            this->setBackgroundRole(QPalette::Dark);
+            event->acceptProposedAction();
+            return;
         }
     } else {
         setText(tr("Only single files can be dropped"));
         msgBox.exec();
-        goto CleanUp;
+        this->setBackgroundRole(QPalette::Dark);
+        event->acceptProposedAction();
+        return;
     }
 
-    mode = getMode(filename);
+    Mode mode = getMode(filename);
 
-PasswordPrompts:
-    if (mode == Encrypt) {
-        password = QInputDialog::getText(this, "Enter password", "Must be at least 10 characters", QLineEdit::Password, "", &okPw);
-        if (!okPw) {
-            goto CleanUp;
+    Outcome o;
+    do {
+        o = passwordPrompts(mode, &password);
+        if (o == cancel) {
+            this->setBackgroundRole(QPalette::Dark);
+            event->acceptProposedAction();
+            return;
         }
-        if (password.length() < 10) {
-            msgBox.setText("Password must be at least 10 characters.");
+    } while (o);
+
+    do {
+        outFilename = saveDialog(filename, mode);
+        if (outFilename == "") {
+            // user hit cancel
+            this->setBackgroundRole(QPalette::Dark);
+            event->acceptProposedAction();
+            return;
+        } else if (QFileInfo(outFilename).exists()) {
+            // warn and redo
+            msgBox.setText("Must select filename that does not already exist.");
             msgBox.exec();
-            goto PasswordPrompts;
+            o = redo;
+        } else {
+            o = success;
         }
-        passwordConfirm = QInputDialog::getText(this, "Confirm password", "", QLineEdit::Password, "", &okConfirm);
-        if (!okConfirm) {
-            goto CleanUp;
-        }
-        if (password != passwordConfirm) {
-            QMessageBox redoBox;
-            redoBox.setInformativeText("Would you like to re-enter?");
-            redoBox.setText("Passwords do not match.");
-            redoBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
-            redoBox.setDefaultButton(QMessageBox::Ok);
-            if (redoBox.exec() == QMessageBox::Ok) {
-                goto PasswordPrompts;
-            } else {
-                goto CleanUp;
-            }
-        }
-    } else if (mode == Decrypt) {
-        password = QInputDialog::getText(this, "Decrypt password", "Enter the password that was used to encrypt this file", QLineEdit::Password, "", &okPw);
-        if (!okPw) {
-            goto CleanUp;
-        }
-    }
-
-    outFilename = saveDialog(filename, mode);
+    } while (o);
 
     setText("Working...");
     config = makeConfig(mode, password.toUtf8().data(), filename.toUtf8().data(), outFilename.toUtf8().data());
     if (config == nullptr) {
         msgBox.setText("Could not start transfer, possibly due to malformed password or filename.");
         msgBox.exec();
-        goto CleanUp;
+        this->setBackgroundRole(QPalette::Dark);
+        event->acceptProposedAction();
+        return;
     }
     ret_msg = start(config);
     msgBox.setText(ret_msg);
     msgBox.exec();
-    this->clear();
-
-CleanUp:
     destroyConfig(config);
     destroyCString(ret_msg);
-    setBackgroundRole(QPalette::Dark);
-    event->acceptProposedAction();
+    this->clear();
 }
 
 void DropArea::dragLeaveEvent(QDragLeaveEvent *event)

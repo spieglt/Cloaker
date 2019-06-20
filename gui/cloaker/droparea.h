@@ -81,6 +81,8 @@ protected:
 
 private:
     QLabel *label;
+    void* config;
+    char* ret_msg;
 };
 //! [DropArea header part2]
 

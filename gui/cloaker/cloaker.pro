@@ -44,23 +44,24 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 
-unix: LIBS += -L$$PWD/../../gui_adapter/target/release/ -ladapter
+unix: LIBS += -L$$PWD/../../adapter/target/release/ -ladapter
 
 unix: LIBS += -ldl
 
-INCLUDEPATH += $$PWD/../../gui_adapter/target/release
-DEPENDPATH += $$PWD/../../gui_adapter/target/release
+INCLUDEPATH += $$PWD/../../adapter/target/release
+DEPENDPATH += $$PWD/../../adapter/target/release
 
-unix: PRE_TARGETDEPS += $$PWD/../../gui_adapter/target/release/libadapter.a
+unix: PRE_TARGETDEPS += $$PWD/../../adapter/target/release/libadapter.a
 
 DISTFILES +=
 
 ICON = macCloakerLogo.icns
+RC_ICONS = cloaker.ico
 
-win32: LIBS += -L$$PWD/../../gui_adapter/target/x86_64-pc-windows-gnu/release/ -ladapter -lws2_32 -luserenv
+win32: LIBS += -L$$PWD/../../adapter/target/x86_64-pc-windows-gnu/release/ -ladapter -lws2_32 -luserenv
 
-INCLUDEPATH += $$PWD/../../gui_adapter/target/x86_64-pc-windows-gnu/release
-DEPENDPATH += $$PWD/../../gui_adapter/target/x86_64-pc-windows-gnu/release
+INCLUDEPATH += $$PWD/../../adapter/target/x86_64-pc-windows-gnu/release
+DEPENDPATH += $$PWD/../../adapter/target/x86_64-pc-windows-gnu/release
 
-win32:!win32-g++: PRE_TARGETDEPS += $$PWD/../../gui_adapter/target/x86_64-pc-windows-gnu/release/adapter.lib
-else:win32-g++: PRE_TARGETDEPS += $$PWD/../../gui_adapter/target/x86_64-pc-windows-gnu/release/libadapter.a
+win32:!win32-g++: PRE_TARGETDEPS += $$PWD/../../adapter/target/x86_64-pc-windows-gnu/release/adapter.lib
+else:win32-g++: PRE_TARGETDEPS += $$PWD/../../adapter/target/x86_64-pc-windows-gnu/release/libadapter.a
