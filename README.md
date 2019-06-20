@@ -5,7 +5,7 @@ Version 2.0 improvements: added automatic mode detection, removed Encrypt and De
 
 ### Very simple cross-platform file encryption
 
-Have you ever wanted to protect a file with a password and found it unnecessarily difficult to do so? Cloaker aims to provide the most straightforward file encryption possible. Just drop a file onto the window, set a password, and choose where to save it. To decrypt, drop the encrypted file on the window, enter the password, and choose the output location. (Tip: decrypt to a ramdisk for temporary use to avoid writing data to permanent storage.)
+Have you ever wanted to protect a file with a password and found it unnecessarily difficult to do so? Cloaker aims to provide the most straightforward file encryption possible. Just drop a file onto the window, set a password, and choose where to save it. To decrypt, drop the encrypted file on the window, enter the password, and choose the output location. (Tip: decrypt to a ramdisk for temporary use to avoid writing data to permanent storage.) No installation required! On Windows it's a single `.exe`, on Mac a standard `.app` bundle, and on Linux a single executable `.run` file.
 
 ![Demo](demo.gif)
 
