@@ -162,6 +162,6 @@ void DropArea::dragLeaveEvent(QDragLeaveEvent *event)
 
 void DropArea::clear()
 {
-    setText(tr("1. Select mode above\n\n\n2. Drop files here"));
+    setText(tr("Drop a normal file here to encrypt\n\nor an encrypted file to decrypt"));
     setBackgroundRole(QPalette::Dark);
 }

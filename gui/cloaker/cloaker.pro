@@ -43,6 +43,7 @@ qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
+QMAKE_LFLAGS_WINDOWS += -static -static-libgcc -static-libstdc++
 
 unix: LIBS += -L$$PWD/../../adapter/target/release/ -ladapter
 
@@ -58,10 +59,10 @@ DISTFILES +=
 ICON = macCloakerLogo.icns
 RC_ICONS = cloaker.ico
 
-win32: LIBS += -L$$PWD/../../adapter/target/x86_64-pc-windows-gnu/release/ -ladapter -lws2_32 -luserenv
+win32: LIBS += -L$$PWD/../../adapter/target/release/ -ladapter -lws2_32 -luserenv
 
-INCLUDEPATH += $$PWD/../../adapter/target/x86_64-pc-windows-gnu/release
-DEPENDPATH += $$PWD/../../adapter/target/x86_64-pc-windows-gnu/release
+INCLUDEPATH += $$PWD/../../adapter/target/release
+DEPENDPATH += $$PWD/../../adapter/target/release
 
-win32:!win32-g++: PRE_TARGETDEPS += $$PWD/../../adapter/target/x86_64-pc-windows-gnu/release/adapter.lib
-else:win32-g++: PRE_TARGETDEPS += $$PWD/../../adapter/target/x86_64-pc-windows-gnu/release/libadapter.a
+win32:!win32-g++: PRE_TARGETDEPS += $$PWD/../../adapter/target/release/adapter.lib
+else:win32-g++: PRE_TARGETDEPS += $$PWD/../../adapter/target/release/libadapter.a
