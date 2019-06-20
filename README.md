@@ -12,13 +12,13 @@ Have you ever wanted to protect a file with a password and found it unnecessaril
 **Data Loss Disclaimer:** if you lose or forget your password, **your data cannot be recovered!** Use a password manager or another secure form of backup. Cloaker uses stream encryption from the sodium-oxide Rust wrapper of libsodium (xchacha20poly1305).
 
 # Compilation instructions:
-`cd gui_adapter && cargo build && cargo build --release`. 
+`cd adapter && cargo build && cargo build --release`. 
 
-Then open `unix_gui/cloaker/cloaker.pro` in Qt Creator (Qt 5.12), make sure kit is 64bit, and build.
+Then open `gui/cloaker/cloaker.pro` in Qt Creator (Qt 5.12), make sure kit is 64bit, and build.
 
 If you want to make a distributable on... 
 
-**Mac:**, use `macqtdeploy` with the built .app bundle as argument. 
+**Mac:** use `macqtdeploy` with the built .app bundle as argument. 
 
 **Linux:** compile a static version of Qt with something like:
 ```
@@ -32,6 +32,8 @@ $ make
 > cd c:\; mkdir qt-static; cd qt-static
 > C:\Qt\5.12.0\Src\configure.bat -prefix C:\qt-static\5.12.0 -static -release -opensource -confirm-license -skip multimedia -no-compile-examples -nomake examples -no-openssl -no-opengl
 ```
+
+Then run `rustup toolchain install stable-x86_64-pc-windows-gnu` and `rustup set default-host x86_64-pc-windows-gnu`. (Linking Qt statically requires compiling with MinGW, which requires linking against Rust libs compiled with MinGW.) Then `cd` to `cloaker\adapter`, delete the `target` directory, run `cargo build --release` again, go into the new `target\release` directory, and rename `adapter.lib` to `libadapter.a`. (https://github.com/rust-lang/rust/issues/43749)
 
 **Then, on Linux and Windows:** go to Qt Creator settings, add a new version of Qt, and point to `wherever/it/is/qt-static/qtbase/bin/qmake`. Then add a new "Kit" that points to this Qt version, and build Release version with that kit selected. (Use your preexisting dynamically-linked version of Qt for debugging.)
 
