@@ -82,8 +82,6 @@ pub fn decrypt(in_file: &mut File, out_file: &mut File, password: &str)
     if !(in_file.metadata()?.len() > (pwhash::SALTBYTES + HEADERBYTES + SIGNATURE.len()) as u64) {
         return Err(CoreError::new("File not big enough to have been encrypted"))?;
     }
-    // TODO: read file signature if present
-
 
     let mut salt = [0u8; pwhash::SALTBYTES];
     let mut signature = [0u8; 4];
