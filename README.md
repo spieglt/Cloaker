@@ -22,10 +22,19 @@ If you want to make a distributable on...
 **Mac:** use `macqtdeploy` with the built .app bundle as argument. 
 
 **Linux only:** compile a static version of Qt with something like:
+
+(Mint 19 example)
 ```
 $ mkdir ~/qt-static && cd ~/qt-static
 $ ~/Qt/5.12.3/Src/configure -prefix ~/qt-static/5.12.3 -static -release -opensource -confirm-license -skip multimedia -no-compile-examples -nomake examples -no-openssl -no-libpng -skip wayland -qt-xcb
 $ make
+```
+
+(Ubuntu 19.04 example, you'll probably have to install extra fontconfig and freetype dependencies)
+```
+$ mkdir ~/qt-static && cd ~/qt-static
+$ ~/Qt/5.13.0/Src/configure -static -release -prefix ~/qt-static/install -opensource -confirm-license -skip multimedia -skip webengine -no-compile-examples -nomake examples -no-openssl -no-libpng -skip wayland -fontconfig
+$ make -j8
 ```
 
 **Windows only:** compile Qt statically with something like:
