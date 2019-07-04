@@ -3,8 +3,10 @@ use cloaker::*;
 use std::error::Error;
 use std::path::{Path, PathBuf};
 use std::process::exit;
-use rpassword;
+// use rpassword;
 use sodiumoxide;
+use std::io;
+use std::io::prelude::*;
 
 const FILE_EXTENSION: &str = ".cloaker";
 
@@ -57,7 +59,13 @@ fn do_it() -> Result<(), Box<Error>> {
             f
         },
     };
-    let password = rpassword::read_password_from_tty(Some("Password: "))?;
+    // let password = rpassword::read_password_from_tty(Some("Password: "))?;
+    let stdin = io::stdin();
+    let mut password = String::new();
+    print!("Password: ");
+    io::stdout().flush();
+    stdin.read_line(&mut password)?;
+    password = password.trim().to_string();
     let config = Config::new(mode, password, filename.to_string(), out_filename.to_string());
     main_routine(&config)
 }
