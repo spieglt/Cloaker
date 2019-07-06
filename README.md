@@ -33,7 +33,8 @@ $ make
 (Ubuntu 19.04 example, you'll probably have to install extra fontconfig and freetype dependencies)
 ```
 $ mkdir ~/qt-static && cd ~/qt-static
-$ ~/Qt/5.13.0/Src/configure -static -release -prefix ~/qt-static/install -opensource -confirm-license -skip multimedia -skip webengine -no-compile-examples -nomake examples -no-openssl -no-libpng -skip wayland -fontconfig
+$ mkdir build install; cd build
+$ ~/Qt/5.13.0/Src/configure -static -release -prefix ~/qt-static/install -opensource -confirm-license -skip multimedia -skip webengine -no-compile-examples -nomake examples -no-openssl -no-libpng -skip wayland -fontconfig -ico -gtk
 $ make -j8
 ```
 
