@@ -57,7 +57,7 @@ fn do_it() -> Result<(), Box<Error>> {
             f
         },
     };
-    let password = rpassword::read_password_from_tty(Some("Password: "))?;
+    let password = rpassword::prompt_password_stdout("Password: ")?;
     let config = Config::new(mode, password, filename.to_string(), out_filename.to_string());
     main_routine(&config)
 }
