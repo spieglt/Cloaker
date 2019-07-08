@@ -27,7 +27,7 @@ If you want to make a distributable on...
 ```
 $ mkdir ~/qt-static && cd ~/qt-static
 $ mkdir build install; cd build
-$ ~/Qt/5.12.3/Src/configure -prefix ~/qt-static/install -static -release -opensource -confirm-license -skip multimedia -skip webengine -skip wayland -no-libpng -no-compile-examples -nomake examples -no-openssl -ico -gtk -gif -qt-xcb
+$ ~/Qt/5.12.3/Src/configure -prefix ~/qt-static/install -static -release -opensource -confirm-license -skip multimedia -skip webengine -skip wayland -no-compile-examples -nomake examples -no-openssl -ico -gtk -gif -qt-xcb
 $ make -j8
 ```
 
@@ -35,7 +35,7 @@ $ make -j8
 ```
 $ mkdir ~/qt-static && cd ~/qt-static
 $ mkdir build install; cd build
-$ ~/Qt/5.13.0/Src/configure -prefix ~/qt-static/install -static -release -opensource -confirm-license -skip multimedia -skip webengine -skip wayland -no-libpng -no-compile-examples -nomake examples -no-openssl -ico -gtk -gif -fontconfig
+$ ~/Qt/5.13.0/Src/configure -prefix ~/qt-static/install -static -release -opensource -confirm-license -skip multimedia -skip webengine -skip wayland -no-compile-examples -nomake examples -no-openssl -ico -gtk -gif -fontconfig
 $ make -j8
 ```
 
