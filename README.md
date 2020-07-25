@@ -3,7 +3,7 @@
 Ready-to-use downloads on the [Releases](https://github.com/spieglt/Cloaker/releases) page
 
 **Version 3.0 improvements:** added brute force test, added real argument parsing and output file parameter for CLI, increased minimum password length to 12.
-**Version 2.0 improvements:** added automatic mode detection, removed Encrypt and Decrypt buttons, deleted Windows MFC GUI in favor of statically-linked Qt on all 3 platforms.
+**Version 2.0 improvements:** added automatic mode detection, removed Encrypt and Decrypt buttons, deleted Windows MFC GUI in favor of Qt on all 3 platforms.
 
 ### Very simple cross-platform file encryption
 
