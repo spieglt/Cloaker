@@ -2,7 +2,7 @@
 use std::error::Error;
 use std::fs::{File, remove_file};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Mode {
     Encrypt,
     Decrypt,
@@ -17,7 +17,8 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new(mode: Mode, password: String, _filename: &str, _out_file: &str) -> Self {
+    pub fn new(_mode: &Mode, password: String, _filename: &str, _out_file: &str) -> Self {
+        let mode: Mode = _mode.clone();
         let filename = _filename.to_string();
         let out_file = _out_file.to_string();
         Config{mode, password, filename, out_file}

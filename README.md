@@ -2,6 +2,7 @@
 
 Ready-to-use downloads on the [Releases](https://github.com/spieglt/Cloaker/releases) page
 
+**Version 3.0 improvements:** added brute force test, added real argument parsing and output file parameter for CLI, increased minimum password length to 12.
 **Version 2.0 improvements:** added automatic mode detection, removed Encrypt and Decrypt buttons, deleted Windows MFC GUI in favor of statically-linked Qt on all 3 platforms.
 
 ### Very simple cross-platform file encryption
@@ -46,7 +47,7 @@ $ make -j8
 > mingw32-make.exe
 ```
 
-Then run `rustup toolchain install stable-x86_64-pc-windows-gnu` and `rustup set default-host x86_64-pc-windows-gnu`. (Linking Qt statically requires compiling with MinGW, which requires linking against Rust libs compiled with MinGW.) Then `cd` to `cloaker\adapter`, delete the `target` directory, run `cargo build --release` again, go into the new `target\release` directory, and rename `adapter.lib` to `libadapter.a`. (https://github.com/rust-lang/rust/issues/43749)
+Then run `rustup toolchain install stable-x86_64-pc-windows-gnu` and `rustup set default-host x86_64-pc-windows-gnu`. (Linking Qt statically requires compiling with MinGW, which requires linking against Rust libs compiled with MinGW.) Then `cd` to `cloaker\adapter`, delete the `target` directory and run `cargo build --release` again.
 
 **Then, on Linux and Windows:** go to Qt Creator settings, add a new version of Qt, and point to `wherever/it/is/qt-static/qtbase/bin/qmake`. Then add a new "Kit" that points to this Qt version, and build Release version with that kit selected. (Use your preexisting dynamically-linked version of Qt for debugging.)
 

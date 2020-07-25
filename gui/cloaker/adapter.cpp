@@ -16,8 +16,9 @@ Mode getMode(QString filename) {
     uint32_t bytes = 0;
     for (int i=0; i<4; i++) {
         bytes <<= 8;
-        bytes |= fs.get();
+        bytes |= (unsigned int)fs.get();
     }
+    fs.close();
     if (bytes == FILE_SIGNATURE) {
         return Decrypt;
     }
@@ -30,7 +31,7 @@ QString saveDialog(QString inFile, Mode mode) {
         return QFileDialog::getSaveFileName(nullptr, "Save encrypted file", inFile, "", nullptr, QFileDialog::DontConfirmOverwrite);
     } else { // decrypt, chop off extension if there, otherwise prepend decrypted.
         if (inFile.endsWith(FILE_EXTENSION, Qt::CaseInsensitive)) {
-            inFile = inFile.left(inFile.length() - strlen(FILE_EXTENSION));
+            inFile = inFile.left(inFile.length() - (int)strlen(FILE_EXTENSION));
         } else {
             inFile += QString::fromUtf8("_decrypted");
         }
@@ -44,12 +45,12 @@ Outcome passwordPrompts(Mode mode, QString* password) {
     bool okPw, okConfirm;
     QMessageBox msgBox;
     if (mode == Encrypt) {
-        *password = QInputDialog::getText(nullptr, "Enter password", "Must be at least 10 characters", QLineEdit::Password, "", &okPw);
+        *password = QInputDialog::getText(nullptr, "Enter password", "Must be at least 12 characters", QLineEdit::Password, "", &okPw);
         if (!okPw) {
             return cancel;
         }
         if (password->length() < 12) {
-            msgBox.setText("Password must be at least 10 characters.");
+            msgBox.setText("Password must be at least 12 characters.");
             msgBox.exec();
             return redo;
         }

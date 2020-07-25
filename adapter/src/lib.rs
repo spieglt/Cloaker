@@ -23,7 +23,7 @@ pub extern fn makeConfig(mode: u8, password: *mut c_char, filename: *mut c_char,
         Ok(s) => s,
         Err(_) => return null_mut(),
     };
-    Box::into_raw(Box::new(Config::new(m, p, f, o)))
+    Box::into_raw(Box::new(Config::new(&m, p, &f, &o)))
 }
 
 #[no_mangle]

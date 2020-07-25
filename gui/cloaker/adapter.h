@@ -19,7 +19,7 @@ enum Mode {
 };
 
 enum Outcome {
-    success,
+    success = 0,
     redo,
     cancel,
 };

@@ -1,9 +1,8 @@
 [package]
 name = "cloaker"
-version = "0.1.0"
-authors = ["Theron <tspiegl@gmail.com>"]
+version = "3.0.0"
+authors = ["Theron Spiegl <tspiegl@gmail.com>"]
 edition = "2018"
 
 [dependencies]
 sodiumoxide = "0.2.2"
-# zip = "0.5.2"
