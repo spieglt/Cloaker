@@ -23,7 +23,7 @@ mod tests {
         let mut out_path = std::env::temp_dir();
         out_path.push("encrypted.txt");
         let out_file = out_path.to_str().unwrap().to_string();
-        let config = cloaker::Config::new(cloaker::Mode::Encrypt, pw, &in_file, &out_file);
+        let config = cloaker::Config::new(&cloaker::Mode::Encrypt, pw, &in_file, &out_file);
         cloaker::main_routine(&config)?;
 
         // measure frequency of brute-force attempts
@@ -34,13 +34,12 @@ mod tests {
 
         let mut possible_chars = ('a'..='z').collect::<Vec<char>>();
         possible_chars.append(&mut ('A'..='Z').collect());
-        let mut nums_and_syms = "0123456789!@#$%^&*()-_=+`~,./<>?;':\"[]{}\\|".as_bytes().to_vec();
         possible_chars.append(&mut "0123456789!@#$%^&*()-_=+`~,./<>?;':\"[]{}\\|".chars().collect());
         let mut combiner = possible_chars.iter().combinations_with_replacement(10);
         println!("possible chars: {}", possible_chars.len());
 
         let num_combos = 121623751733457400.;
-        let mut start_time = Instant::now();
+        let start_time = Instant::now();
         let mut attempts = 0;
 
         loop {
@@ -52,7 +51,7 @@ mod tests {
                 .collect::<Vec<char>>(); // and then collect it into a vector of chars.
             let guess: String = guess_chars.into_iter().collect();
             // println!("guess: {}", guess);
-            let c = cloaker::Config::new(cloaker::Mode::Decrypt, guess, &out_file, "./result");
+            let c = cloaker::Config::new(&cloaker::Mode::Decrypt, guess, &out_file, "./result");
             assert!(cloaker::main_routine(&c).is_err());
 
             attempts += 1;
