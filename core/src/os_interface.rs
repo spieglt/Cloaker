@@ -17,12 +17,14 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new(mode: Mode, password: String, filename: String, out_file: String) -> Self {
+    pub fn new(mode: Mode, password: String, _filename: &str, _out_file: &str) -> Self {
+        let filename = _filename.to_string();
+        let out_file = _out_file.to_string();
         Config{mode, password, filename, out_file}
     }
 }
 
-pub fn main_routine(c: &Config) -> Result<(), Box<Error>> {
+pub fn main_routine(c: &Config) -> Result<(), Box<dyn Error>> {
     let mut in_file = File::open(c.filename.clone())?;
     match c.mode {
         Mode::Encrypt => {

@@ -31,7 +31,7 @@ impl error::Error for CoreError {}
 
 
 pub fn encrypt(in_file: &mut File, out_file: &mut File, password: &str) 
-    -> Result<(), Box<error::Error>> {
+    -> Result<(), Box<dyn error::Error>> {
 
     // change to vec to allocate on heap and have larger chunksize
     // was overflowing stack when set to 1_000_000
@@ -76,7 +76,7 @@ pub fn encrypt(in_file: &mut File, out_file: &mut File, password: &str)
 }
 
 pub fn decrypt(in_file: &mut File, out_file: &mut File, password: &str)
-    -> Result<(), Box<error::Error>> {
+    -> Result<(), Box<dyn error::Error>> {
 
     // make sure file is at least prefix + salt + header
     if !(in_file.metadata()?.len() > (pwhash::SALTBYTES + HEADERBYTES + SIGNATURE.len()) as u64) {
@@ -94,7 +94,7 @@ pub fn decrypt(in_file: &mut File, out_file: &mut File, password: &str)
         in_file.read_exact(&mut salt[4..])?;
     }
     let salt = pwhash::Salt(salt);
-    
+
     let mut header = [0u8; HEADERBYTES];
     in_file.read_exact(&mut header)?;
     let header = Header(header);

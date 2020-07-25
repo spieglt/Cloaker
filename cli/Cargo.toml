@@ -8,3 +8,7 @@ edition = "2018"
 cloaker = { path = "../core" }
 rpassword = "3.0.2"
 sodiumoxide = "0.2.2"
+
+[dev-dependencies]
+rand = "0.5"
+itertools = "0.9"
