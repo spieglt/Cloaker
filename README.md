@@ -2,7 +2,7 @@
 
 Ready-to-use downloads on the [Releases](https://github.com/spieglt/Cloaker/releases) page
 
-**Version 3.0 improvements:** added real argument parsing and output file parameter for CLI, increased minimum password length to 12, added brute force test.
+**Version 3.0 improvements:** added real argument parsing and output file parameter for CLI, increased minimum password length to 12.
 
 ### Very simple cross-platform file encryption
 
@@ -19,7 +19,7 @@ Then open `gui/cloaker/cloaker.pro` in Qt Creator (Qt 5.12), make sure kit is 64
 
 If you want to make a distributable on... 
 
-**Mac:** use `macqtdeploy` with the built .app bundle as argument. 
+**Mac:** use the `macdeployqt` script in your Qt installation's `bin/` directory with the built .app bundle as argument.
 
 **Linux only:** compile a static version of Qt with something like:
 
