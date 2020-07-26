@@ -28,8 +28,8 @@ mod tests {
 
         // measure frequency of brute-force attempts
         /*
-            Uppercase and lowercase letters makes 52 values. With a 10 character minimum, that makes 90,177,170,226 passwords.
-            Letters, numbers, and symbols makes 94 values. With a 10 character minimum, that makes 23,591,276,125,340 passwords.
+            Letters, numbers, and symbols makes 94 values. With a 12 character minimum, that makes 1,951,641,934,005,400 passwords.
+
         */
 
         let mut possible_chars = ('a'..='z').collect::<Vec<char>>();
@@ -38,7 +38,7 @@ mod tests {
         let mut combiner = possible_chars.iter().combinations_with_replacement(10);
         println!("possible chars: {}", possible_chars.len());
 
-        let num_combos = 121623751733457400.;
+        let num_combos = 1951641934005400.;
         let start_time = Instant::now();
         let mut attempts = 0;
 
@@ -50,8 +50,7 @@ mod tests {
                 .cloned().cloned() // clone it twice, which is weird. we're dealing with references to references at this point I guess so have to undo it twice.
                 .collect::<Vec<char>>(); // and then collect it into a vector of chars.
             let guess: String = guess_chars.into_iter().collect();
-            // println!("guess: {}", guess);
-            let c = cloaker::Config::new(&cloaker::Mode::Decrypt, guess, &out_file, "./result");
+            let c = cloaker::Config::new(&cloaker::Mode::Decrypt, guess.clone(), &out_file, "./result");
             assert!(cloaker::main_routine(&c).is_err());
 
             attempts += 1;
@@ -61,7 +60,10 @@ mod tests {
             // attempts_per_sec * num_secs = num_combos, so num_secs = num_combos / attempts_per_sec
             let num_secs = num_combos / attempts_per_sec;
             let num_years = num_secs / (60. * 60. * 24. * 365.);
-            println!("at {:.3} attempts per second, it would take {:.2} years to test all 10-character passwords including lower-/uppercase letters, numbers, and symbols.", attempts_per_sec, num_years);
+            if attempts % 100 == 0 {
+                println!("guess: {}", guess);
+                println!("at {:.3} attempts per second, it would take {:.2} years to test all 12-character passwords including lower-/uppercase letters, numbers, and symbols.", attempts_per_sec, num_years);
+            }
         }
         Ok(())
     }
