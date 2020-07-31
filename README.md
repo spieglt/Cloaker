@@ -52,7 +52,7 @@ Then run `rustup toolchain install stable-x86_64-pc-windows-gnu` and `rustup set
 
 # Planned features:
 - Progress indicator/speed staticstics?
-- CLI: add password length requirement, and a real flag parser with an output parameter
+- Change minimum password length to 14 or 16?
 - Mobile version someday?
 
 # Issues:
