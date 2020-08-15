@@ -17,8 +17,8 @@ mod tests {
         let mut file = std::fs::File::create(&temp_file)?;
         file.write_all(&random_data)?;
 
-        // encrypt file with 10-char password
-        let pw = "abcdefghij".to_string();
+        // encrypt file with 12-char password
+        let pw = "abcdefghijkl".to_string();
         let in_file = temp_file.to_str().unwrap().to_string();
         let mut out_path = std::env::temp_dir();
         out_path.push("encrypted.txt");
