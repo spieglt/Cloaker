@@ -50,6 +50,9 @@ Then run `rustup toolchain install stable-x86_64-pc-windows-gnu` and `rustup set
 
 **Then, on Linux and Windows:** go to Qt Creator settings, add a new version of Qt, and point to `wherever/it/is/qt-static/qtbase/bin/qmake`. Then add a new "Kit" that points to this Qt version, and build Release version with that kit selected. (Use your preexisting dynamically-linked version of Qt for debugging.)
 
+# CLI compilation instructions
+`cd cli; cargo build --release`. Executable will be at `cloaker/cli/target/release/cloaker_cli`(`.exe`).
+
 # Planned features:
 - Progress indicator/speed staticstics?
 - CLI: add password length requirement, and a real flag parser with an output parameter
