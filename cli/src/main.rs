@@ -7,7 +7,6 @@ use std::error::Error;
 use std::path::{Path, PathBuf};
 use std::process::exit;
 use rpassword;
-use sodiumoxide;
 use clap::{App, Arg, ArgGroup};
 
 const FILE_EXTENSION: &str = ".cloaker";
@@ -27,7 +26,6 @@ fn main() {
 }
 
 fn do_it() -> Result<(String, Mode), Box<dyn Error>> {
-    sodiumoxide::init().map_err(|_| "sodiumoxide init failed")?;
 
     let matches = App::new("Cloaker")
         .version("v3.0")

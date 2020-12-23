@@ -7,7 +7,6 @@ edition = "2018"
 [dependencies]
 cloaker = { path = "../core" }
 rpassword = "3.0.2"
-sodiumoxide = "0.2.2"
 clap = "~2.33"
 
 [dev-dependencies]

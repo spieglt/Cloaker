@@ -35,8 +35,8 @@ pub fn encrypt(in_file: &mut File, out_file: &mut File, password: &str)
 
     // change to vec to allocate on heap and have larger chunksize
     // was overflowing stack when set to 1_000_000
-    let mut buf = [0; CHUNKSIZE];
-    let mut bytes_left = in_file.metadata()?.len();
+    let mut buffer = [0; CHUNKSIZE];
+    let mut bytes_left = in_file.metadata()?.len() as usize;
     
     // write file signature
     out_file.write(&SIGNATURE)?;
@@ -53,22 +53,22 @@ pub fn encrypt(in_file: &mut File, out_file: &mut File, password: &str)
         .map_err(|_| CoreError::new("init_push failed"))?;
     out_file.write(&header.0)?;
 
-    loop {
-        match (*in_file).read(&mut buf) {
-            Ok(num_read) if num_read > 0 => {
-                bytes_left -= num_read as u64;
-                let tag = match bytes_left {
-                    0 => Tag::Final,
-                    _ => Tag::Message,
-                };
-                out_file.write(
-                    &stream.push(&buf[..num_read], None, tag)
-                        .map_err(|_| CoreError::new("Encrypting file failed"))?
-                )?;
-                continue
-            },
-            Err(e) => Err(e)?,
-            _ => break, // reached EOF
+    while bytes_left > 0 {
+        if bytes_left > buffer.len() {
+            in_file.read_exact(&mut buffer)?;
+            bytes_left -= buffer.len();
+            out_file.write(
+                &stream.push(&buffer, None, Tag::Message)
+                    .map_err(|_| CoreError::new("Encrypting file failed"))?
+            )?;
+        } else {
+            let mut remainder = vec![];
+            in_file.read_to_end(&mut remainder)?;
+            bytes_left -= remainder.len();
+            out_file.write(
+                &stream.push(&remainder, None, Tag::Final)
+                    .map_err(|_| CoreError::new("Encrypting file failed"))?
+            )?;
         }
     }
 
@@ -78,8 +78,9 @@ pub fn encrypt(in_file: &mut File, out_file: &mut File, password: &str)
 pub fn decrypt(in_file: &mut File, out_file: &mut File, password: &str)
     -> Result<(), Box<dyn error::Error>> {
 
+    let mut bytes_left = in_file.metadata()?.len() as usize;
     // make sure file is at least prefix + salt + header
-    if !(in_file.metadata()?.len() > (pwhash::SALTBYTES + HEADERBYTES + SIGNATURE.len()) as u64) {
+    if !(bytes_left > pwhash::SALTBYTES + HEADERBYTES + SIGNATURE.len()) {
         return Err(CoreError::new("File not big enough to have been encrypted"))?;
     }
 
@@ -87,17 +88,21 @@ pub fn decrypt(in_file: &mut File, out_file: &mut File, password: &str)
     let mut signature = [0u8; 4];
 
     in_file.read_exact(&mut signature)?;
+    bytes_left -= signature.len();
     if signature == SIGNATURE { // if the signature is present, read into all of salt
         in_file.read_exact(&mut salt)?;
+        bytes_left -= pwhash::SALTBYTES;
     } else { // or take the bytes from signature and read the rest from file
         &mut salt[..4].copy_from_slice(&signature);
         in_file.read_exact(&mut salt[4..])?;
+        bytes_left -= pwhash::SALTBYTES - 4;
     }
     let salt = pwhash::Salt(salt);
 
     let mut header = [0u8; HEADERBYTES];
     in_file.read_exact(&mut header)?;
     let header = Header(header);
+    bytes_left -= HEADERBYTES;
 
     let mut key = [0u8; KEYBYTES];
     pwhash::derive_key(&mut key, password.as_bytes(), &salt,
@@ -111,15 +116,19 @@ pub fn decrypt(in_file: &mut File, out_file: &mut File, password: &str)
         .map_err(|_| CoreError::new("init_pull failed"))?;
 
     while stream.is_not_finalized() {
-        match in_file.read(&mut buffer) {
-            Ok(num_read) if num_read > 0 => {
-                let (decrypted, _tag) = stream.pull(&buffer[..num_read], None)
-                    .map_err(|_| CoreError::new("Incorrect password"))?;
-                out_file.write(&decrypted)?;
-                continue
-            },
-            Err(e) => return Err(Box::new(e)),
-            _ => return Err(CoreError::new("Decryption error"))?, // reached EOF
+        if bytes_left > buffer.len() {
+            in_file.read_exact(&mut buffer)?;
+            bytes_left -= buffer.len();
+            let (decrypted, _tag) = stream.pull(&buffer, None)
+                .map_err(|_| CoreError::new("Incorrect password"))?;
+            out_file.write(&decrypted)?;
+        } else {
+            let mut remainder = vec![];
+            in_file.read_to_end(&mut remainder)?;
+            bytes_left -= remainder.len();
+            let (decrypted, _tag) = stream.pull(&remainder, None)
+                .map_err(|_| CoreError::new("Incorrect password"))?;
+            out_file.write(&decrypted)?;
         }
     }
     Ok(())

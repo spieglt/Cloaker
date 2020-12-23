@@ -1,6 +1,7 @@
 
 use std::error::Error;
 use std::fs::{File, remove_file};
+use sodiumoxide;
 
 #[derive(Clone, Debug)]
 pub enum Mode {
@@ -26,6 +27,7 @@ impl Config {
 }
 
 pub fn main_routine(c: &Config) -> Result<(), Box<dyn Error>> {
+    sodiumoxide::init().map_err(|_| "sodiumoxide init failed")?;
     let mut in_file = File::open(c.filename.clone())?;
     match c.mode {
         Mode::Encrypt => {
