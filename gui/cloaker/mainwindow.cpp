@@ -18,7 +18,7 @@ MainWindow::~MainWindow()
 void MainWindow::on_actionAbout_Cloaker_triggered()
 {
     QMessageBox::about(this, "About Cloaker",
-                       "<h2>Cloaker v3.0</h2>"
+                       "<h2>Cloaker v3.1</h2>"
                        "<p>Copyright (C) Theron Spiegl 2019</p>"
                        "<p>Licensed under the GNU General Public License v3.0</p>"
                        "<p><a href=\"https://github.com/spieglt/cloaker\">https://github.com/spieglt/cloaker</a></p>"
