@@ -7,7 +7,6 @@ use std::error::Error;
 use std::path::{Path, PathBuf};
 use std::process::exit;
 use rpassword;
-use sodiumoxide;
 use clap::{App, Arg, ArgGroup};
 
 const FILE_EXTENSION: &str = ".cloaker";
@@ -27,10 +26,9 @@ fn main() {
 }
 
 fn do_it() -> Result<(String, Mode), Box<dyn Error>> {
-    sodiumoxide::init().map_err(|_| "sodiumoxide init failed")?;
 
     let matches = App::new("Cloaker")
-        .version("v3.0")
+        .version("v3.1")
         .author("Theron Spiegl")
         .about("Cloaker is a simple file encryption utility. Passwords must be at least 12 characters, and a variety of letters, numbers, and symbols is strongly recommended. Written in Rust using sodiumoxide/libsodium's stream encryption. Copyright © 2020 Theron Spiegl. All rights reserved.")
         .arg(Arg::with_name("encrypt")
