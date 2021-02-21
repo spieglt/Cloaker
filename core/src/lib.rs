@@ -5,11 +5,12 @@ use std::{error, fmt};
 use std::fs::File;
 use std::io::prelude::*;
 use sodiumoxide::crypto::pwhash;
+use sodiumoxide::crypto::pwhash::argon2id13;
 use sodiumoxide::crypto::secretstream::
     {Stream, Tag, ABYTES, HEADERBYTES, KEYBYTES};
 use sodiumoxide::crypto::secretstream::xchacha20poly1305::{Header, Key};
 
-const CHUNKSIZE: usize = 4096;
+const CHUNKSIZE: usize = 1024 * 1024;
 const SIGNATURE: [u8; 4] = [0xC1, 0x0A, 0x4B, 0xED];
 
 #[derive(Debug)]
@@ -33,21 +34,22 @@ impl error::Error for CoreError {}
 pub fn encrypt(in_file: &mut File, out_file: &mut File, password: &str) 
     -> Result<(), Box<dyn error::Error>> {
 
-    // change to vec to allocate on heap and have larger chunksize
-    // was overflowing stack when set to 1_000_000
-    let mut buf = [0; CHUNKSIZE];
+    let mut buf = vec![0; CHUNKSIZE];
     let mut bytes_left = in_file.metadata()?.len();
     
     // write file signature
     out_file.write(&SIGNATURE)?;
 
-    let salt = pwhash::gen_salt();
-    out_file.write(&salt.0)?;
+    // let salt = pwhash::gen_salt();
+    // out_file.write(&salt.0)?;
+    let salt = "saltsaltsaltsalt".as_bytes();
+    let salt = argon2id13::Salt::from_slice(&salt).unwrap();
 
     let mut key = [0u8; KEYBYTES];
-    pwhash::derive_key(&mut key, password.as_bytes(), &salt,
-        pwhash::OPSLIMIT_INTERACTIVE,
-        pwhash::MEMLIMIT_INTERACTIVE).unwrap();
+    argon2id13::derive_key(&mut key, "password".as_bytes(), &salt,
+        argon2id13::OPSLIMIT_INTERACTIVE,
+        argon2id13::MEMLIMIT_INTERACTIVE).unwrap();
+    println!("{:?}", key);
     let key = Key(key);
     let (mut stream, header) = Stream::init_push(&key)
         .map_err(|_| CoreError::new("init_push failed"))?;
