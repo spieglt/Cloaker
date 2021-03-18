@@ -1,6 +1,7 @@
 
 use std::error::Error;
 use std::fs::{File, remove_file};
+use std::io::prelude::*;
 use sodiumoxide;
 
 #[derive(Clone, Debug)]
@@ -42,7 +43,16 @@ pub fn main_routine(c: &Config) -> Result<(), Box<dyn Error>> {
         },
         Mode::Decrypt => {
             let mut out_file = File::create(c.out_file.clone())?;
-            match crate::decrypt(&mut in_file, &mut out_file, &c.password) {
+            let mut first_four = [0u8; 4];
+            {
+                let mut in_file = File::open(c.filename.clone())?;
+                in_file.read_exact(&mut first_four)?;
+            };
+            let decrypt_func = match first_four {
+                crate::SIGNATURE => crate::decrypt,
+                _ => crate::legacy::decrypt,
+            };
+            match decrypt_func(&mut in_file, &mut out_file, &c.password) {
                 Ok(()) => (),
                 Err(e) => {
                     remove_file(&c.out_file).map_err(|e2| format!("{}. Could not delete output file: {}.", e, e2))?;
