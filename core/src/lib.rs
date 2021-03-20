@@ -102,11 +102,9 @@ pub fn decrypt<I: Read, O: Write>(in_file: &mut I, out_file: &mut O, password: &
         .map_err(|_| CoreError::new("init_pull failed"))?;
     while stream.is_not_finalized() {
         let (_eof, bytes_read) = maybe_fill_buffer(in_file, &mut buffer)?;
-        if bytes_read != 0 {
-            let (decrypted, _tag) = stream.pull(&buffer[..bytes_read], None)
-                .map_err(|_| CoreError::new("Incorrect password"))?;
-            out_file.write(&decrypted)?;
-        }
+        let (decrypted, _tag) = stream.pull(&buffer[..bytes_read], None)
+            .map_err(|_| CoreError::new("Incorrect password"))?;
+        out_file.write(&decrypted)?;
     }
     Ok(())
 }
