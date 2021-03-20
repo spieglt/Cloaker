@@ -3,7 +3,6 @@ mod os_interface;
 pub use os_interface::*;
 
 use std::{error, fmt};
-use std::fs::File;
 use std::io::prelude::*;
 use sodiumoxide::crypto::pwhash::argon2id13;
 use sodiumoxide::crypto::secretstream::
@@ -31,7 +30,7 @@ impl fmt::Display for CoreError {
 impl error::Error for CoreError {}
 
 
-pub fn encrypt(in_file: &mut File, out_file: &mut File, password: &str) 
+pub fn encrypt<I: Read, O: Write>(in_file: &mut I, out_file: &mut O, password: &str)
     -> Result<(), Box<dyn error::Error>> {
 
     let mut buffer = vec![0; CHUNKSIZE];
@@ -65,7 +64,7 @@ pub fn encrypt(in_file: &mut File, out_file: &mut File, password: &str)
     Ok(())
 }
 
-pub fn decrypt(in_file: &mut File, out_file: &mut File, password: &str)
+pub fn decrypt<I: Read, O: Write>(in_file: &mut I, out_file: &mut O, password: &str)
     -> Result<(), Box<dyn error::Error>> {
 
     // TODO
