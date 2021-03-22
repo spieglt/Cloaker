@@ -14,13 +14,18 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+    void updateProgress(int);
 
 private slots:
 
     void on_actionAbout_Cloaker_triggered();
 
+
 private:
     Ui::MainWindow *ui;
 };
+
+extern MainWindow *gMainWindow;
+
 
 #endif // MAINWINDOW_H

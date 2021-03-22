@@ -2,10 +2,21 @@ use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::ptr::null_mut;
 
-use cloaker::{Config, Mode, main_routine};
+use cloaker::{Config, Mode, Ui, main_routine};
+
+struct ProgressUpdater {
+    output_func: extern "C" fn(i32),
+}
+
+impl Ui for ProgressUpdater {
+    fn output(&self, percentage: i32) {
+        (self.output_func)(percentage);
+    }
+}
+
 
 #[no_mangle]
-pub extern fn makeConfig(mode: u8, password: *mut c_char, filename: *mut c_char, out_filename: *mut c_char) -> *mut Config {
+pub extern fn makeConfig(mode: u8, password: *mut c_char, filename: *mut c_char, out_filename: *mut c_char, output_func: extern "C" fn(i32)) -> *mut Config {
     let m = match mode {
         0 => Mode::Encrypt,
         1 => Mode::Decrypt,
@@ -23,7 +34,8 @@ pub extern fn makeConfig(mode: u8, password: *mut c_char, filename: *mut c_char,
         Ok(s) => s,
         Err(_) => return null_mut(),
     };
-    Box::into_raw(Box::new(Config::new(&m, p, &f, &o)))
+    let ui = Box::new(ProgressUpdater{output_func});
+    Box::into_raw(Box::new(Config::new(&m, p, &f, &o, ui)))
 }
 
 #[no_mangle]

@@ -28,7 +28,7 @@ impl error::Error for CoreError {}
 
 pub fn decrypt(in_file: &mut File, out_file: &mut File, password: &str)
     -> Result<(), Box<dyn error::Error>> {
-
+    println!("legacy decryption");
     let mut bytes_left = in_file.metadata()?.len() as usize;
     // make sure file is at least prefix + salt + header
     if !(bytes_left > pwhash::SALTBYTES + HEADERBYTES + SIGNATURE.len()) {
@@ -41,9 +41,11 @@ pub fn decrypt(in_file: &mut File, out_file: &mut File, password: &str)
     in_file.read_exact(&mut signature)?;
     bytes_left -= signature.len();
     if signature == SIGNATURE { // if the signature is present, read into all of salt
+        println!("contains legacy signature");
         in_file.read_exact(&mut salt)?;
         bytes_left -= pwhash::SALTBYTES;
     } else { // or take the bytes from signature and read the rest from file
+        println!("no signature");
         &mut salt[..4].copy_from_slice(&signature);
         in_file.read_exact(&mut salt[4..])?;
         bytes_left -= pwhash::SALTBYTES - 4;

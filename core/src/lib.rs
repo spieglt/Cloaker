@@ -29,8 +29,7 @@ impl fmt::Display for CoreError {
 
 impl error::Error for CoreError {}
 
-
-pub fn encrypt<I: Read, O: Write>(in_file: &mut I, out_file: &mut O, password: &str)
+pub fn encrypt<I: Read, O: Write>(in_file: &mut I, out_file: &mut O, password: &str, ui: &Box<dyn Ui>)
     -> Result<(), Box<dyn error::Error>> {
 
     let mut buffer = vec![0; CHUNKSIZE];
@@ -55,6 +54,7 @@ pub fn encrypt<I: Read, O: Write>(in_file: &mut I, out_file: &mut O, password: &
         eof = res.0;
         let bytes_read = res.1;
         let tag = if eof { Tag::Final } else { Tag::Message };
+        ui.output(53);
         out_file.write(
             &stream.push(&buffer[..bytes_read], None, tag)
                 .map_err(|_| CoreError::new("Encrypting file failed"))?
@@ -64,7 +64,7 @@ pub fn encrypt<I: Read, O: Write>(in_file: &mut I, out_file: &mut O, password: &
     Ok(())
 }
 
-pub fn decrypt<I: Read, O: Write>(in_file: &mut I, out_file: &mut O, password: &str)
+pub fn decrypt<I: Read, O: Write>(in_file: &mut I, out_file: &mut O, password: &str, ui: &Box<dyn Ui>)
     -> Result<(), Box<dyn error::Error>> {
 
     // TODO
@@ -104,6 +104,7 @@ pub fn decrypt<I: Read, O: Write>(in_file: &mut I, out_file: &mut O, password: &
         let (_eof, bytes_read) = maybe_fill_buffer(in_file, &mut buffer)?;
         let (decrypted, _tag) = stream.pull(&buffer[..bytes_read], None)
             .map_err(|_| CoreError::new("Incorrect password"))?;
+        ui.output(13);
         out_file.write(&decrypted)?;
     }
     Ok(())

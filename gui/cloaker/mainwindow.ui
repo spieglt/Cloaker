@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>300</width>
-    <height>300</height>
+    <width>400</width>
+    <height>400</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -57,6 +57,13 @@ or an encrypted file to decrypt</string>
       </property>
      </widget>
     </item>
+    <item row="1" column="0">
+     <widget class="QProgressBar" name="progBar">
+      <property name="value">
+       <number>24</number>
+      </property>
+     </widget>
+    </item>
    </layout>
   </widget>
   <widget class="QMenuBar" name="menuBar">
@@ -64,8 +71,8 @@ or an encrypted file to decrypt</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>300</width>
-     <height>20</height>
+     <width>400</width>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuAbout">

@@ -1,5 +1,6 @@
 # Cloaker
 
+**Version 4:** Changed password hashing from `scryptsalsa208sha256` to `Argon2id`. (Version 4 can still decrypt files encrypted with earlier versions, but version 3 and below cannot decrypt files encrypted with version 4+.) Increased speed by ??. 
 Ready-to-use downloads on the [Releases](https://github.com/spieglt/Cloaker/releases) page
 
 ### Very simple cross-platform file encryption
@@ -24,7 +25,7 @@ If you want to make a distributable on...
 **Windows only:** compile Qt statically with something like:
 ```
 > cd c:\; mkdir qt-static; cd qt-static
-> C:\Qt\5.12.0\Src\configure.bat -prefix C:\qt-static\5.12.0 -static -release -opensource -confirm-license -skip multimedia -no-compile-examples -nomake examples -no-openssl -no-opengl
+> C:\Qt\5.15.2\Src\configure.bat -prefix C:\qt-static\5.15.2 -static -release -opensource -confirm-license -skip multimedia -no-compile-examples -nomake examples -no-openssl -opengl desktop -platform win32-g++
 > mingw32-make.exe
 ```
 

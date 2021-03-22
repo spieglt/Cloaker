@@ -1,14 +1,13 @@
 #ifndef ADAPTER_H
 #define ADAPTER_H
 
-#endif // ADAPTER_H
-
 #include <QFileDialog>
 #include <QString>
 #include <fstream>
+#include "mainwindow.h"
 
 // rust functions
-extern "C" void *makeConfig(int, char*, char*, char*);
+extern "C" void *makeConfig(int, char*, char*, char*, void (*output)(uint32_t));
 extern "C" char *start(void*);
 extern "C" void destroyConfig(void*);
 extern "C" void destroyCString(char*);
@@ -25,8 +24,12 @@ enum Outcome {
 };
 
 static const char* FILE_EXTENSION = ".cloaker";
-static uint32_t FILE_SIGNATURE = 0xC10A4BED;
+static uint32_t FILE_SIGNATURE = 0xC10A6BED;
+static uint32_t LEGACY_FILE_SIGNATURE = 0xC10A4BED;
 
 Mode getMode(QString filename);
 QString saveDialog(QString inFile, Mode mode);
 Outcome passwordPrompts(Mode mode, QString* password);
+extern "C" void output(uint32_t progress);
+
+#endif // ADAPTER_H

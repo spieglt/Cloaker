@@ -5,6 +5,11 @@
 #include <QLineEdit>
 
 
+extern "C" void output(uint32_t progress) {
+    gMainWindow->updateProgress(progress);
+}
+
+
 Mode getMode(QString filename) {
     // if it ends with file extension, return decrypting
     if (filename.endsWith(FILE_EXTENSION, Qt::CaseInsensitive)) {
@@ -19,7 +24,7 @@ Mode getMode(QString filename) {
         bytes |= (unsigned int)fs.get();
     }
     fs.close();
-    if (bytes == FILE_SIGNATURE) {
+    if (bytes == FILE_SIGNATURE || bytes == LEGACY_FILE_SIGNATURE) {
         return Decrypt;
     }
     return Encrypt;

@@ -138,7 +138,7 @@ void DropArea::dropEvent(QDropEvent *event)
     } while (o);
 
     setText("Working...");
-    config = makeConfig(mode, password.toUtf8().data(), filename.toUtf8().data(), outFilename.toUtf8().data());
+    config = makeConfig(mode, password.toUtf8().data(), filename.toUtf8().data(), outFilename.toUtf8().data(), output);
     if (config == nullptr) {
         msgBox.setText("Could not start transfer, possibly due to malformed password or filename.");
         msgBox.exec();
