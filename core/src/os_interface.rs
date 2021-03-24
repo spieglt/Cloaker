@@ -13,8 +13,8 @@ pub enum Mode {
 pub struct Config {
     pub mode: Mode,
     pub password: String,
-    pub filename: String,
-    pub out_file: String,
+    pub filename: Option<String>,
+    pub out_file: Option<String>,
     pub ui: Box<dyn Ui>,
 }
 
@@ -23,30 +23,49 @@ pub trait Ui {
 }
 
 impl Config {
-    pub fn new(_mode: &Mode, password: String, _filename: &str, _out_file: &str, ui: Box<dyn Ui>) -> Self {
+    pub fn new(_mode: &Mode, password: String, _filename: Option<&str>, _out_file: Option<&str>, ui: Box<dyn Ui>) -> Self {
         let mode: Mode = _mode.clone();
-        let filename = _filename.to_string();
-        let out_file = _out_file.to_string();
+        let filename = _filename.map(|f| f.to_string());
+        let out_file = _out_file.map(|o| o.to_string());
         Config{mode, password, filename, out_file, ui}
+    }
+}
+
+fn get_reader(reader: Option<File>) -> Box<dyn Read> {
+    match reader {
+        Some(file) => Box::new(file),
+        None => Box::new(std::io::stdin()),
+    }
+}
+fn get_writer(reader: Option<File>) -> Box<dyn Write> {
+    match reader {
+        Some(file) => Box::new(file),
+        None => Box::new(std::io::stdout()),
     }
 }
 
 pub fn main_routine(c: &Config) -> Result<(), Box<dyn Error>> {
     sodiumoxide::init().map_err(|_| "sodiumoxide init failed")?;
-    let mut in_file = File::open(c.filename.clone())?;
+    let mut in_file = match c.filename {
+        Some(s) => Some(File::open(s)?),
+        None => None,
+    };
+    let mut out_file = match c.out_file {
+        Some(s) => Some(File::open(s)?),
+        None => None,
+    };
+    let input = get_reader(in_file);
+    let output = get_writer(out_file);
     match c.mode {
         Mode::Encrypt => {
-            let mut out_file = File::create(c.out_file.clone())?;
-            match crate::encrypt(&mut in_file, &mut out_file, &c.password, &c.ui) {
-                Ok(()) => (),
-                Err(e) => {
-                    remove_file(&c.out_file).map_err(|e2| format!("{}. Could not delete output file: {}.", e, e2))?;
-                    Err(e)?;
-                },
-            };
+            crate::encrypt(&mut input, &mut output, &c.password, &c.ui).or_else(|e| {
+                if let Some(out_file) = c.out_file {
+                    remove_file(&out_file).map_err(|e2| format!("{}. Could not delete output file: {}.", e, e2))?;
+                }
+                Err(e)?
+            });
         },
         Mode::Decrypt => {
-            let mut out_file = File::create(c.out_file.clone())?;
             let mut first_four = [0u8; 4];
             {
                 let mut in_file = File::open(c.filename.clone())?;

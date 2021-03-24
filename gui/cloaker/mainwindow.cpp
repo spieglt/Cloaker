@@ -9,6 +9,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    ui->progBar->setVisible(false);
 }
 
 MainWindow::~MainWindow()
@@ -31,5 +32,8 @@ void MainWindow::on_actionAbout_Cloaker_triggered()
 
 void MainWindow::updateProgress(int percentage)
 {
+    if (!this->ui->progBar->isVisible()) {
+        this->ui->progBar->setVisible(true);
+    }
     this->ui->progBar->setValue(percentage);
 }
