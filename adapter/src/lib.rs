@@ -35,7 +35,7 @@ pub extern fn makeConfig(mode: u8, password: *mut c_char, filename: *mut c_char,
         Err(_) => return null_mut(),
     };
     let ui = Box::new(ProgressUpdater{output_func});
-    Box::into_raw(Box::new(Config::new(&m, p, &f, &o, ui)))
+    Box::into_raw(Box::new(Config::new(&m, p, Some(&f), Some(&o), ui)))
 }
 
 #[no_mangle]
@@ -44,8 +44,8 @@ pub extern fn start(ptr: *mut Config) -> *mut c_char {
     let msg = match main_routine(config) {
         Ok(_) => {
             match config.mode {
-                Mode::Encrypt => format!("Success! File {} has been encrypted.", config.out_file),
-                Mode::Decrypt => format!("Success! File {} has been decrypted.", config.out_file),
+                Mode::Encrypt => format!("Success! File {} has been encrypted.", config.out_file.as_ref().unwrap()),
+                Mode::Decrypt => format!("Success! File {} has been decrypted.", config.out_file.as_ref().unwrap()),
             }
         },
         Err(e) => format!("{}", e),

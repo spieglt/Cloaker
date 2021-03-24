@@ -29,16 +29,17 @@ impl fmt::Display for CoreError {
 
 impl error::Error for CoreError {}
 
-pub fn encrypt<I: Read, O: Write>(in_file: &mut I, out_file: &mut O, password: &str, ui: &Box<dyn Ui>)
+pub fn encrypt<I: Read, O: Write>(input: &mut I, output: &mut O, password: &str, ui: &Box<dyn Ui>, filesize: Option<usize>)
     -> Result<(), Box<dyn error::Error>> {
 
     let mut buffer = vec![0; CHUNKSIZE];
+    let mut total_bytes_read = 0;
     
     // write file signature
-    out_file.write(&SIGNATURE)?;
+    output.write(&SIGNATURE)?;
 
     let salt = argon2id13::gen_salt();
-    out_file.write(&salt.0)?;
+    output.write(&salt.0)?;
 
     let mut key = [0u8; KEYBYTES];
     argon2id13::derive_key(&mut key, password.as_bytes(), &salt,
@@ -47,15 +48,19 @@ pub fn encrypt<I: Read, O: Write>(in_file: &mut I, out_file: &mut O, password: &
     let key = Key(key);
     let (mut stream, header) = Stream::init_push(&key)
         .map_err(|_| CoreError::new("init_push failed"))?;
-    out_file.write(&header.0)?;
+    output.write(&header.0)?;
     let mut eof = false;
     while !eof {
-        let res = maybe_fill_buffer(in_file, &mut buffer)?;
+        let res = maybe_fill_buffer(input, &mut buffer)?;
         eof = res.0;
         let bytes_read = res.1;
+        total_bytes_read += bytes_read;
         let tag = if eof { Tag::Final } else { Tag::Message };
-        ui.output(53);
-        out_file.write(
+        if let Some(size) = filesize {
+            let percentage = (((total_bytes_read as f32) / (size as f32)) * 100.) as i32;
+            ui.output(percentage);
+        }
+        output.write(
             &stream.push(&buffer[..bytes_read], None, tag)
                 .map_err(|_| CoreError::new("Encrypting file failed"))?
         )?;
@@ -64,30 +69,23 @@ pub fn encrypt<I: Read, O: Write>(in_file: &mut I, out_file: &mut O, password: &
     Ok(())
 }
 
-pub fn decrypt<I: Read, O: Write>(in_file: &mut I, out_file: &mut O, password: &str, ui: &Box<dyn Ui>)
+pub fn decrypt<I: Read, O: Write>(input: &mut I, output: &mut O, password: &str, ui: &Box<dyn Ui>, filesize: Option<usize>)
     -> Result<(), Box<dyn error::Error>> {
 
-    // TODO
-    // let mut bytes_left = in_file.metadata()?.len() as usize;
-    // // make sure file is at least prefix + salt + header
-    // if !(bytes_left > argon2id13::SALTBYTES + HEADERBYTES + SIGNATURE.len()) {
-    //     return Err(CoreError::new("File not big enough to have been encrypted"))?;
-    // }
+    // make sure file is at least prefix + salt + header
+    if let Some(size) = filesize {
+        if !(size >= argon2id13::SALTBYTES + HEADERBYTES + SIGNATURE.len()) {
+            return Err(CoreError::new("File not big enough to have been encrypted"))?;
+        }
+    }
+    let mut total_bytes_read = 0;
 
     let mut salt = [0u8; argon2id13::SALTBYTES];
-    let mut signature = [0u8; 4];
-
-    in_file.read_exact(&mut signature)?;
-    if signature == SIGNATURE { // if the signature is present, read into all of salt
-        in_file.read_exact(&mut salt)?;
-    } else { // or take the bytes from signature and read the rest from file
-        &mut salt[..4].copy_from_slice(&signature);
-        in_file.read_exact(&mut salt[4..])?;
-    }
+    input.read_exact(&mut salt)?;
     let salt = argon2id13::Salt(salt);
 
     let mut header = [0u8; HEADERBYTES];
-    in_file.read_exact(&mut header)?;
+    input.read_exact(&mut header)?;
     let header = Header(header);
 
     let mut key = [0u8; KEYBYTES];
@@ -101,11 +99,15 @@ pub fn decrypt<I: Read, O: Write>(in_file: &mut I, out_file: &mut O, password: &
     let mut stream = Stream::init_pull(&header, &key)
         .map_err(|_| CoreError::new("init_pull failed"))?;
     while stream.is_not_finalized() {
-        let (_eof, bytes_read) = maybe_fill_buffer(in_file, &mut buffer)?;
+        let (_eof, bytes_read) = maybe_fill_buffer(input, &mut buffer)?;
+        total_bytes_read += bytes_read;
         let (decrypted, _tag) = stream.pull(&buffer[..bytes_read], None)
             .map_err(|_| CoreError::new("Incorrect password"))?;
-        ui.output(13);
-        out_file.write(&decrypted)?;
+        if let Some(size) = filesize {
+            let percentage = (((total_bytes_read as f32) / (size as f32)) * 100.) as i32;
+            ui.output(percentage);
+        }
+        output.write(&decrypted)?;
     }
     Ok(())
 }

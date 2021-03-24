@@ -1,5 +1,5 @@
+use crate::os_interface::Ui;
 use std::{error, fmt};
-use std::fs::File;
 use std::io::prelude::*;
 use sodiumoxide::crypto::pwhash;
 use sodiumoxide::crypto::secretstream::
@@ -26,36 +26,26 @@ impl fmt::Display for CoreError {
 
 impl error::Error for CoreError {}
 
-pub fn decrypt(in_file: &mut File, out_file: &mut File, password: &str)
+pub fn decrypt<I: Read, O: Write>(input: &mut I, output: &mut O, password: &str, ui: &Box<dyn Ui>, filesize: Option<usize>)
     -> Result<(), Box<dyn error::Error>> {
-    println!("legacy decryption");
-    let mut bytes_left = in_file.metadata()?.len() as usize;
+
     // make sure file is at least prefix + salt + header
-    if !(bytes_left > pwhash::SALTBYTES + HEADERBYTES + SIGNATURE.len()) {
-        return Err(CoreError::new("File not big enough to have been encrypted"))?;
+    if let Some(size) = filesize {
+        if !(size >= pwhash::SALTBYTES + HEADERBYTES + SIGNATURE.len()) {
+            return Err(CoreError::new("File not big enough to have been encrypted"))?;
+        }
     }
+    let mut total_bytes_read = 0;
 
+    // TODO: needs first four bytes to read into salt
     let mut salt = [0u8; pwhash::SALTBYTES];
-    let mut signature = [0u8; 4];
-
-    in_file.read_exact(&mut signature)?;
-    bytes_left -= signature.len();
-    if signature == SIGNATURE { // if the signature is present, read into all of salt
-        println!("contains legacy signature");
-        in_file.read_exact(&mut salt)?;
-        bytes_left -= pwhash::SALTBYTES;
-    } else { // or take the bytes from signature and read the rest from file
-        println!("no signature");
-        &mut salt[..4].copy_from_slice(&signature);
-        in_file.read_exact(&mut salt[4..])?;
-        bytes_left -= pwhash::SALTBYTES - 4;
-    }
+    input.read_exact(&mut salt)?;
     let salt = pwhash::Salt(salt);
 
+
     let mut header = [0u8; HEADERBYTES];
-    in_file.read_exact(&mut header)?;
+    input.read_exact(&mut header)?;
     let header = Header(header);
-    bytes_left -= HEADERBYTES;
 
     let mut key = [0u8; KEYBYTES];
     pwhash::derive_key(&mut key, password.as_bytes(), &salt,
@@ -64,25 +54,32 @@ pub fn decrypt(in_file: &mut File, out_file: &mut File, password: &str)
         .map_err(|_| CoreError::new("Deriving key failed"))?;
     let key = Key(key);
 
-    let mut buffer = [0u8; CHUNKSIZE + ABYTES];
+    let mut buffer = vec![0u8; CHUNKSIZE + ABYTES];
     let mut stream = Stream::init_pull(&header, &key)
         .map_err(|_| CoreError::new("init_pull failed"))?;
-
     while stream.is_not_finalized() {
-        if bytes_left > buffer.len() {
-            in_file.read_exact(&mut buffer)?;
-            bytes_left -= buffer.len();
-            let (decrypted, _tag) = stream.pull(&buffer, None)
-                .map_err(|_| CoreError::new("Incorrect password"))?;
-            out_file.write(&decrypted)?;
-        } else {
-            let mut remainder = vec![];
-            in_file.read_to_end(&mut remainder)?;
-            bytes_left -= remainder.len();
-            let (decrypted, _tag) = stream.pull(&remainder, None)
-                .map_err(|_| CoreError::new("Incorrect password"))?;
-            out_file.write(&decrypted)?;
+        let (_eof, bytes_read) = maybe_fill_buffer(input, &mut buffer)?;
+        total_bytes_read += bytes_read;
+        let (decrypted, _tag) = stream.pull(&buffer[..bytes_read], None)
+            .map_err(|_| CoreError::new("Incorrect password"))?;
+        if let Some(size) = filesize {
+            let percentage = (((total_bytes_read as f32) / (size as f32)) * 100.) as i32;
+            ui.output(percentage);
         }
+        output.write(&decrypted)?;
     }
     Ok(())
+}
+
+// returns Ok(true, bytes_read) if EOF, and Ok(false, bytes_read) if buffer was filled without EOF
+fn maybe_fill_buffer<T: Read>(reader: &mut T, buffer: &mut Vec<u8>) -> std::io::Result<(bool, usize)> {
+    let mut bytes_read = 0;
+    while bytes_read < buffer.len() {
+        match reader.read(&mut buffer[bytes_read..]) {
+            Ok(x) if x == 0 => return Ok((true, bytes_read)), // EOF
+            Ok(x) => bytes_read += x,
+            Err(e) => return Err(e),
+        };
+    }
+    Ok((false, bytes_read))
 }

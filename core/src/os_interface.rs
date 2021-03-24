@@ -46,47 +46,64 @@ fn get_writer(reader: Option<File>) -> Box<dyn Write> {
 
 pub fn main_routine(c: &Config) -> Result<(), Box<dyn Error>> {
     sodiumoxide::init().map_err(|_| "sodiumoxide init failed")?;
-    let mut in_file = match c.filename {
+    let in_file = match &c.filename {
         Some(s) => Some(File::open(s)?),
         None => None,
     };
-    let mut out_file = match c.out_file {
+    let out_file = match &c.out_file {
         Some(s) => Some(File::open(s)?),
         None => None,
     };
-    let input = get_reader(in_file);
-    let output = get_writer(out_file);
+    let filesize = if let Some(f) = &in_file {
+        Some(f.metadata()?.len() as usize)
+    } else {
+        None
+    };
+
+    let mut input = get_reader(in_file);
+    let mut output = get_writer(out_file);
     match c.mode {
         Mode::Encrypt => {
-            crate::encrypt(&mut input, &mut output, &c.password, &c.ui).or_else(|e| {
-                if let Some(out_file) = c.out_file {
-                    remove_file(&out_file).map_err(|e2| format!("{}. Could not delete output file: {}.", e, e2))?;
-                }
-                Err(e)?
-            });
+            match crate::encrypt(&mut input, &mut output, &c.password, &c.ui, filesize) {
+                Ok(()) => (),
+                Err(e) => {
+                    if let Some(out_file) = &c.out_file {
+                        remove_file(&out_file).map_err(|e2| format!("{}. Could not delete output file: {}.", e, e2))?;
+                    }
+                    Err(e)?
+                },
+            };
         },
         Mode::Decrypt => {
+            // start reading stream before handing to encrypt/decrypt
+            // legacy decrypt might need a first-four-bytes param
             let mut first_four = [0u8; 4];
-            {
-                let mut in_file = File::open(c.filename.clone())?;
+            if let Some(f) = &c.filename {
+                let mut in_file = File::open(f)?;
                 in_file.read_exact(&mut first_four)?;
-            };
+            } else {
+                std::io::stdin().read_exact(&mut first_four)?;
+            }
             match first_four {
                 crate::SIGNATURE => {
-                    match crate::decrypt(&mut in_file, &mut out_file, &c.password, &c.ui) {
-                            Ok(()) => (),
-                            Err(e) => {
-                                remove_file(&c.out_file).map_err(|e2| format!("{}. Could not delete output file: {}.", e, e2))?;
-                                Err(e)?;
-                            },
-                    }
-                },
-                _ => {
-                    match crate::legacy::decrypt(&mut in_file, &mut out_file, &c.password) {
+                    match crate::decrypt(&mut input, &mut output, &c.password, &c.ui, filesize) {
                         Ok(()) => (),
                         Err(e) => {
-                            remove_file(&c.out_file).map_err(|e2| format!("{}. Could not delete output file: {}.", e, e2))?;
-                            Err(e)?;
+                            if let Some(out_file) = &c.out_file {
+                                remove_file(&out_file).map_err(|e2| format!("{}. Could not delete output file: {}.", e, e2))?;
+                            }
+                            Err(e)?
+                        },
+                    };
+                },
+                _ => {
+                    match crate::legacy::decrypt(&mut input, &mut output, &c.password, &c.ui, filesize) {
+                        Ok(()) => (),
+                        Err(e) => {
+                            if let Some(out_file) = &c.out_file {
+                                remove_file(&out_file).map_err(|e2| format!("{}. Could not delete output file: {}.", e, e2))?;
+                            }
+                            Err(e)?
                         },
                     };
                 },
