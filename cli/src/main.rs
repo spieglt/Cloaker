@@ -11,6 +11,20 @@ use clap::{App, Arg, ArgGroup};
 
 const FILE_EXTENSION: &str = ".cloaker";
 
+struct ProgressUpdater {
+    mode: Mode
+}
+
+impl Ui for ProgressUpdater {
+    fn output(&self, percentage: i32) {
+        let s = match self.mode {
+            Mode::Encrypt => "Encrypting",
+            Mode::Decrypt => "Decrypting",
+        };
+        print!("\r{}: {}%", s, percentage);
+    }
+}
+
 fn main() {
     let msg = match do_it() {
         Ok((output_filename, mode)) => {
@@ -18,7 +32,7 @@ fn main() {
                 Mode::Encrypt => "encrypted",
                 Mode::Decrypt => "decrypted",
             };
-            format!("Success! {} has been {}.", output_filename, m)
+            format!("\nSuccess! {} has been {}.", output_filename, m)
         },
         Err(e) => format!("{}", e),
     };
@@ -70,8 +84,8 @@ fn do_it() -> Result<(String, Mode), Box<dyn Error>> {
     let output_path = generate_output_path(&mode, filename, matches.value_of("output"))?
         .to_str().ok_or("could not convert output path to string")?.to_string();
     let password = get_password(&mode);
-
-    let config = Config::new(&mode, password, &filename, &output_path);
+    let ui = Box::new(ProgressUpdater{mode: mode.clone()});
+    let config = Config::new(&mode, password, Some(&filename), Some(&output_path), ui);
     match main_routine(&config) {
         Ok(()) => Ok((output_path.to_string(), mode)),
         Err(e) => Err(e),
