@@ -32,15 +32,18 @@ fn main() {
                 Mode::Encrypt => "encrypted",
                 Mode::Decrypt => "decrypted",
             };
-            format!("\nSuccess! {} has been {}.", output_filename, m)
+            if let Some(name) = output_filename {
+                format!("\nSuccess! {} has been {}.", name, m)
+            } else {
+                format!("\nSuccess! Data {} to stdout.", m)
+            }
         },
         Err(e) => format!("{}", e),
     };
     println!("{}", msg);
 }
 
-fn do_it() -> Result<(String, Mode), Box<dyn Error>> {
-
+fn do_it() -> Result<(Option<String>, Mode), Box<dyn Error>> {
     let matches = App::new("Cloaker")
         .version("v4.0")
         .author("Theron Spiegl")
@@ -57,37 +60,79 @@ fn do_it() -> Result<(String, Mode), Box<dyn Error>> {
             .value_name("FILE_TO_DECRYPT")
             .help("Specifies the file to decrypt.")
             .takes_value(true))
+        .arg(Arg::with_name("encrypt_stdin")
+            .short("E")
+            .long("encrypt-stdin")
+            .help("Encrypt from stdin instead of a file."))
+        .arg(Arg::with_name("decrypt_stdin")
+            .short("D")
+            .long("decrypt-stdin")
+            .help("Decrypt from stdin instead of a file."))
         .group(ArgGroup::with_name("mode")
-            .args(&["encrypt", "decrypt"])
+            .args(&["encrypt", "decrypt", "encrypt_stdin", "decrypt_stdin"])
             .required(true))
         .arg(Arg::with_name("output")
             .short("o")
             .long("output")
             .value_name("PATH_TO_OUTPUT_FILE")
             .help("Specifies a path or name for the output file. If the path to an existing directory is given, the input filename will be kept with the .cloaker extension added if encrypting or removed (if decrypting). Otherwise the file will be placed and named according to this parameter."))
+        .arg(Arg::with_name("stdout")
+            .short("O")
+            .long("stdout")
+            .help("Encrypt to stdout instead of to a file."))
+        .group(ArgGroup::with_name("destination")
+            .args(&["output", "stdout"]))
+        .arg(Arg::with_name("password")
+            .short("p")
+            .long("password")
+            .help("Optional, and not recommended due to shell history. Password for the file. User will be prompted if not specified.")
+            .takes_value(true))
         .get_matches();
 
-    let mode = if matches.is_present("encrypt") { Mode::Encrypt } else { Mode::Decrypt };
-    let filename = match mode {
-        Mode::Encrypt => matches.value_of("encrypt").ok_or("file to encrypt not given")?,
-        Mode::Decrypt => matches.value_of("decrypt").ok_or("file to decrypt not given")?,
+    let mode = if matches.is_present("encrypt") || matches.is_present("encrypt_stdin") {
+        Mode::Encrypt
+    } else {
+        Mode::Decrypt
     };
 
-    // make sure input file exists
-    let p = Path::new(filename);
-    if !(p.exists() && p.is_file()) {
-        println!("Invalid filename: {}", filename);
-        exit(1);
-    }
+    let filename = if matches.is_present("encrypt") {
+        let f = matches.value_of("encrypt").ok_or("file to encrypt not given")?;
+        // make sure input file exists
+        let p = Path::new(f);
+        if !(p.exists() && p.is_file()) {
+            println!("Invalid filename: {}", f);
+            exit(1);
+        }
+        Some(f)
+    } else if matches.is_present("decrypt") {
+        let f = matches.value_of("decrypt").ok_or("file to decrypt not given")?;
+        let p = Path::new(f);
+        if !(p.exists() && p.is_file()) {
+            println!("Invalid filename: {}", f);
+            exit(1);
+        }
+        Some(f)
+    } else {
+        None // using stdin
+    };
 
-    // build output path
-    let output_path = generate_output_path(&mode, filename, matches.value_of("output"))?
-        .to_str().ok_or("could not convert output path to string")?.to_string();
-    let password = get_password(&mode);
+
+    let output_path = if !matches.is_present("stdout") {
+        let s = generate_output_path(&mode, filename, matches.value_of("output"))?
+            .to_str().ok_or("could not convert output path to string")?.to_string();
+        Some(s)
+    } else {
+        None
+    };
+    let password = if matches.is_present("password") {
+        matches.value_of("password").ok_or("couldn't get password value")?.to_string()
+    } else {
+        get_password(&mode)
+    };
     let ui = Box::new(ProgressUpdater{mode: mode.clone()});
-    let config = Config::new(&mode, password, Some(&filename), Some(&output_path), ui);
+    let config = Config::new(&mode, password, filename.map(|f| f.to_string()), output_path.clone(), ui);
     match main_routine(&config) {
-        Ok(()) => Ok((output_path.to_string(), mode)),
+        Ok(()) => Ok((output_path, mode)),
         Err(e) => Err(e),
     }
 }
@@ -113,7 +158,7 @@ fn get_password(mode: &Mode) -> String {
     }
 }
 
-fn generate_output_path(mode: &Mode, input: &str, output: Option<&str>) -> Result<PathBuf, String> {
+fn generate_output_path(mode: &Mode, input: Option<&str>, output: Option<&str>) -> Result<PathBuf, String> {
     if output.is_some() { // if output flag was specified,
         let p = PathBuf::from(output.unwrap());
         if p.exists() && p.is_dir() { // and it's a directory,
@@ -129,15 +174,16 @@ fn generate_output_path(mode: &Mode, input: &str, output: Option<&str>) -> Resul
     }
 }
 
-fn generate_default_filename(mode: &Mode, _path: PathBuf, name: &str) -> Result<PathBuf, String> {
+fn generate_default_filename(mode: &Mode, _path: PathBuf, name: Option<&str>) -> Result<PathBuf, String> {
     let mut path = _path;
     let f = match mode {
         Mode::Encrypt => {
-            let mut with_ext = name.to_string();
+            let mut with_ext = if let Some(n) = name { n.to_string() } else { "encrypted".to_string() };
             with_ext.push_str(FILE_EXTENSION);
             with_ext
         },
         Mode::Decrypt => {
+            let name = if let Some(n) = name { n } else { "stdin" };
             if name.ends_with(FILE_EXTENSION) {
                 name[..name.len() - FILE_EXTENSION.len()].to_string()
             } else {

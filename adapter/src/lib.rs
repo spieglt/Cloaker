@@ -35,7 +35,7 @@ pub extern fn makeConfig(mode: u8, password: *mut c_char, filename: *mut c_char,
         Err(_) => return null_mut(),
     };
     let ui = Box::new(ProgressUpdater{output_func});
-    Box::into_raw(Box::new(Config::new(&m, p, Some(&f), Some(&o), ui)))
+    Box::into_raw(Box::new(Config::new(&m, p, Some(f), Some(o), ui)))
 }
 
 #[no_mangle]

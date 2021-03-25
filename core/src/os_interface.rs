@@ -23,10 +23,8 @@ pub trait Ui {
 }
 
 impl Config {
-    pub fn new(_mode: &Mode, password: String, _filename: Option<&str>, _out_file: Option<&str>, ui: Box<dyn Ui>) -> Self {
+    pub fn new(_mode: &Mode, password: String, filename: Option<String>, out_file: Option<String>, ui: Box<dyn Ui>) -> Self {
         let mode: Mode = _mode.clone();
-        let filename = _filename.map(|f| f.to_string());
-        let out_file = _out_file.map(|o| o.to_string());
         Config{mode, password, filename, out_file, ui}
     }
 }

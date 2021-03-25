@@ -1,5 +1,7 @@
 # Cloaker
 
+**Mobile version available at https://cloaker.mobi! Interoperable with the GUI and CLI versions!** [Repo here.](https://github.com/spieglt/CloakerMobile)
+
 **Version 4:** Changed password hashing from `scryptsalsa208sha256` to `Argon2id`. (Version 4 can still decrypt files encrypted with earlier versions, but version 3 and below cannot decrypt files encrypted with version 4+.) Increased speed by ??. 
 Ready-to-use downloads on the [Releases](https://github.com/spieglt/Cloaker/releases) page
 
@@ -37,9 +39,7 @@ Then go to Qt Creator settings, add a new version of Qt, and point to `wherever\
 `cd cli; cargo build --release`. Executable will be at `cloaker/cli/target/release/cloaker_cli`(`.exe`).
 
 # Planned features:
-- Progress indicator/speed staticstics?
 - Change minimum password length to 14 or 16?
-- Mobile version someday?
 
 # Issues:
 - Tell me about them
