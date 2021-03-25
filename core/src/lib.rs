@@ -13,7 +13,7 @@ const CHUNKSIZE: usize = 1024 * 512;
 const SIGNATURE: [u8; 4] = [0xC1, 0x0A, 0x6B, 0xED];
 
 #[derive(Debug)]
-struct CoreError {
+pub struct CoreError {
     message: String,
 }
 
@@ -109,6 +109,7 @@ pub fn decrypt<I: Read, O: Write>(input: &mut I, output: &mut O, password: &str,
         }
         output.write(&decrypted)?;
     }
+    ui.output(100);
     Ok(())
 }
 

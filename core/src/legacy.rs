@@ -7,7 +7,7 @@ use sodiumoxide::crypto::secretstream::
 use sodiumoxide::crypto::secretstream::xchacha20poly1305::{Header, Key};
 
 const CHUNKSIZE: usize = 4096;
-const SIGNATURE: [u8; 4] = [0xC1, 0x0A, 0x4B, 0xED];
+pub const SIGNATURE: [u8; 4] = [0xC1, 0x0A, 0x4B, 0xED];
 
 #[derive(Debug)]
 struct CoreError {
@@ -26,7 +26,7 @@ impl fmt::Display for CoreError {
 
 impl error::Error for CoreError {}
 
-pub fn decrypt<I: Read, O: Write>(input: &mut I, output: &mut O, password: &str, ui: &Box<dyn Ui>, filesize: Option<usize>)
+pub fn decrypt<I: Read, O: Write>(input: &mut I, output: &mut O, password: &str, ui: &Box<dyn Ui>, filesize: Option<usize>, first_four: Option<[u8; 4]>)
     -> Result<(), Box<dyn error::Error>> {
 
     // make sure file is at least prefix + salt + header
@@ -37,11 +37,17 @@ pub fn decrypt<I: Read, O: Write>(input: &mut I, output: &mut O, password: &str,
     }
     let mut total_bytes_read = 0;
 
-    // TODO: needs first four bytes to read into salt
     let mut salt = [0u8; pwhash::SALTBYTES];
-    input.read_exact(&mut salt)?;
+    match first_four {
+        Some(four) => {
+            // if signature was not present, and we're treating this as a cloaker 1.0 file because of the
+            // .cloaker extension or because -d was used from CLI, then use those bytes for the salt.
+            &mut salt[..4].copy_from_slice(&four);
+            input.read_exact(&mut salt[4..])?;
+        },
+        None => input.read_exact(&mut salt)?,
+    };
     let salt = pwhash::Salt(salt);
-
 
     let mut header = [0u8; HEADERBYTES];
     input.read_exact(&mut header)?;
@@ -68,6 +74,7 @@ pub fn decrypt<I: Read, O: Write>(input: &mut I, output: &mut O, password: &str,
         }
         output.write(&decrypted)?;
     }
+    ui.output(100);
     Ok(())
 }
 

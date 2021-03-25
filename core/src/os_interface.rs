@@ -31,19 +31,6 @@ impl Config {
     }
 }
 
-fn get_reader(reader: Option<File>) -> Box<dyn Read> {
-    match reader {
-        Some(file) => Box::new(file),
-        None => Box::new(std::io::stdin()),
-    }
-}
-fn get_writer(reader: Option<File>) -> Box<dyn Write> {
-    match reader {
-        Some(file) => Box::new(file),
-        None => Box::new(std::io::stdout()),
-    }
-}
-
 pub fn main_routine(c: &Config) -> Result<(), Box<dyn Error>> {
     sodiumoxide::init().map_err(|_| "sodiumoxide init failed")?;
     let in_file = match &c.filename {
@@ -51,7 +38,7 @@ pub fn main_routine(c: &Config) -> Result<(), Box<dyn Error>> {
         None => None,
     };
     let out_file = match &c.out_file {
-        Some(s) => Some(File::open(s)?),
+        Some(s) => Some(File::create(s)?),
         None => None,
     };
     let filesize = if let Some(f) = &in_file {
@@ -60,8 +47,8 @@ pub fn main_routine(c: &Config) -> Result<(), Box<dyn Error>> {
         None
     };
 
-    let mut input = get_reader(in_file);
-    let mut output = get_writer(out_file);
+    let mut input = file_or_stdin(in_file);
+    let mut output = file_or_stdout(out_file);
     match c.mode {
         Mode::Encrypt => {
             match crate::encrypt(&mut input, &mut output, &c.password, &c.ui, filesize) {
@@ -78,12 +65,7 @@ pub fn main_routine(c: &Config) -> Result<(), Box<dyn Error>> {
             // start reading stream before handing to encrypt/decrypt
             // legacy decrypt might need a first-four-bytes param
             let mut first_four = [0u8; 4];
-            if let Some(f) = &c.filename {
-                let mut in_file = File::open(f)?;
-                in_file.read_exact(&mut first_four)?;
-            } else {
-                std::io::stdin().read_exact(&mut first_four)?;
-            }
+            input.read_exact(&mut first_four)?;
             match first_four {
                 crate::SIGNATURE => {
                     match crate::decrypt(&mut input, &mut output, &c.password, &c.ui, filesize) {
@@ -97,7 +79,8 @@ pub fn main_routine(c: &Config) -> Result<(), Box<dyn Error>> {
                     };
                 },
                 _ => {
-                    match crate::legacy::decrypt(&mut input, &mut output, &c.password, &c.ui, filesize) {
+                    let first_four = if first_four != crate::legacy::SIGNATURE { Some(first_four) } else { None };
+                    match crate::legacy::decrypt(&mut input, &mut output, &c.password, &c.ui, filesize, first_four) {
                         Ok(()) => (),
                         Err(e) => {
                             if let Some(out_file) = &c.out_file {
@@ -111,4 +94,18 @@ pub fn main_routine(c: &Config) -> Result<(), Box<dyn Error>> {
         },
     }
     Ok(())
+}
+
+fn file_or_stdin(reader: Option<File>) -> Box<dyn Read> {
+    match reader {
+        Some(file) => Box::new(file),
+        None => Box::new(std::io::stdin()),
+    }
+}
+
+fn file_or_stdout(reader: Option<File>) -> Box<dyn Write> {
+    match reader {
+        Some(file) => Box::new(file),
+        None => Box::new(std::io::stdout()),
+    }
 }

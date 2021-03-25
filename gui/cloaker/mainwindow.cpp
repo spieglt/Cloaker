@@ -25,8 +25,10 @@ void MainWindow::on_actionAbout_Cloaker_triggered()
                        "<p>Licensed under the GNU General Public License v3.0</p>"
                        "<p><a href=\"https://github.com/spieglt/cloaker\">https://spiegl.dev/cloaker</a></p>"
                        "<p><b>WARNING:</b> if you encrypt a file and lose or forget the password, the file cannot be recovered.</p>"
-                       "<p><b>Backward compatibility note:</b> if you are trying to decrypt a file made with version 1.0 or 1.1 of Cloaker (with Encrypt and Decrypt buttons), "
+                       "<p><b>Backward compatibility notes:</b> "
+                       "<p>If you are trying to decrypt a file made with version 1.0 or 1.1 of Cloaker (with Encrypt and Decrypt buttons), "
                        "the filename must end with the \".cloaker\" extension. Files encrypted with later versions are not subject to this restriction.</p>"
+                       "<p>This version of Cloaker can decrypt files that were encrypted with previous versions, but previous versions cannot decrypt files encrypted with this version.</p>"
     );
 }
 
