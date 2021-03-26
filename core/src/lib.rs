@@ -36,10 +36,10 @@ pub fn encrypt<I: Read, O: Write>(input: &mut I, output: &mut O, password: &str,
     let mut total_bytes_read = 0;
     
     // write file signature
-    output.write(&SIGNATURE)?;
+    output.write_all(&SIGNATURE)?;
 
     let salt = argon2id13::gen_salt();
-    output.write(&salt.0)?;
+    output.write_all(&salt.0)?;
 
     let mut key = [0u8; KEYBYTES];
     argon2id13::derive_key(&mut key, password.as_bytes(), &salt,
@@ -48,7 +48,7 @@ pub fn encrypt<I: Read, O: Write>(input: &mut I, output: &mut O, password: &str,
     let key = Key(key);
     let (mut stream, header) = Stream::init_push(&key)
         .map_err(|_| CoreError::new("init_push failed"))?;
-    output.write(&header.0)?;
+    output.write_all(&header.0)?;
     let mut eof = false;
     while !eof {
         let res = maybe_fill_buffer(input, &mut buffer)?;
@@ -60,7 +60,7 @@ pub fn encrypt<I: Read, O: Write>(input: &mut I, output: &mut O, password: &str,
             let percentage = (((total_bytes_read as f32) / (size as f32)) * 100.) as i32;
             ui.output(percentage);
         }
-        output.write(
+        output.write_all(
             &stream.push(&buffer[..bytes_read], None, tag)
                 .map_err(|_| CoreError::new("Encrypting file failed"))?
         )?;
@@ -107,14 +107,14 @@ pub fn decrypt<I: Read, O: Write>(input: &mut I, output: &mut O, password: &str,
             let percentage = (((total_bytes_read as f32) / (size as f32)) * 100.) as i32;
             ui.output(percentage);
         }
-        output.write(&decrypted)?;
+        output.write_all(&decrypted)?;
     }
     ui.output(100);
     Ok(())
 }
 
 // returns Ok(true, bytes_read) if EOF, and Ok(false, bytes_read) if buffer was filled without EOF
-fn maybe_fill_buffer<T: Read>(reader: &mut T, buffer: &mut Vec<u8>) -> std::io::Result<(bool, usize)> {
+fn maybe_fill_buffer<R: Read>(reader: &mut R, buffer: &mut Vec<u8>) -> std::io::Result<(bool, usize)> {
     let mut bytes_read = 0;
     while bytes_read < buffer.len() {
         match reader.read(&mut buffer[bytes_read..]) {
