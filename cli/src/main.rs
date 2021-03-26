@@ -12,35 +12,35 @@ use clap::{App, Arg, ArgGroup};
 const FILE_EXTENSION: &str = ".cloaker";
 
 struct ProgressUpdater {
-    mode: Mode
+    mode: Mode,
+    stdout: bool,
 }
 
 impl Ui for ProgressUpdater {
     fn output(&self, percentage: i32) {
-        let s = match self.mode {
-            Mode::Encrypt => "Encrypting",
-            Mode::Decrypt => "Decrypting",
-        };
-        print!("\r{}: {}%", s, percentage);
+        if !self.stdout {
+            let s = match self.mode {
+                Mode::Encrypt => "Encrypting",
+                Mode::Decrypt => "Decrypting",
+            };
+            print!("\r{}: {}%", s, percentage);
+        }
     }
 }
 
 fn main() {
-    let msg = match do_it() {
+    match do_it() {
         Ok((output_filename, mode)) => {
             let m = match mode {
                 Mode::Encrypt => "encrypted",
                 Mode::Decrypt => "decrypted",
             };
             if let Some(name) = output_filename {
-                format!("\nSuccess! {} has been {}.", name, m)
-            } else {
-                format!("\nSuccess! Data {} to stdout.", m)
+                println!("\nSuccess! {} has been {}.", name, m);
             }
         },
-        Err(e) => format!("{}", e),
+        Err(e) => eprintln!("\n{}", e),
     };
-    println!("{}", msg);
 }
 
 fn do_it() -> Result<(Option<String>, Mode), Box<dyn Error>> {
@@ -63,11 +63,13 @@ fn do_it() -> Result<(Option<String>, Mode), Box<dyn Error>> {
         .arg(Arg::with_name("encrypt_stdin")
             .short("E")
             .long("encrypt-stdin")
-            .help("Encrypt from stdin instead of a file."))
+            .help("Encrypt from stdin instead of a file.")
+            .requires("password_flags"))
         .arg(Arg::with_name("decrypt_stdin")
             .short("D")
             .long("decrypt-stdin")
-            .help("Decrypt from stdin instead of a file."))
+            .help("Decrypt from stdin instead of a file.")
+            .requires("password_flags"))
         .group(ArgGroup::with_name("mode")
             .args(&["encrypt", "decrypt", "encrypt_stdin", "decrypt_stdin"])
             .required(true))
@@ -75,18 +77,29 @@ fn do_it() -> Result<(Option<String>, Mode), Box<dyn Error>> {
             .short("o")
             .long("output")
             .value_name("PATH_TO_OUTPUT_FILE")
-            .help("Specifies a path or name for the output file. If the path to an existing directory is given, the input filename will be kept with the .cloaker extension added if encrypting or removed (if decrypting). Otherwise the file will be placed and named according to this parameter."))
+            .help("Specifies a path or name for the output file. If the path to an existing directory is given, the input filename will be kept with the .cloaker extension added if encrypting or removed (if decrypting). Otherwise the file will be placed and named according to this parameter.")
+            .takes_value(true))
         .arg(Arg::with_name("stdout")
             .short("O")
             .long("stdout")
-            .help("Encrypt to stdout instead of to a file."))
+            .help("Encrypt to stdout instead of to a file.")
+            .requires("password_flags"))
         .group(ArgGroup::with_name("destination")
             .args(&["output", "stdout"]))
         .arg(Arg::with_name("password")
             .short("p")
             .long("password")
-            .help("Optional, and not recommended due to shell history. Password for the file. User will be prompted if not specified.")
+            .value_name("PASSWORD")
+            .help("Optional, and not recommended due to the password appearing in shell history. Password for the file. This or the --password-file (-f) flag is required if using stdin and/or stdout.")
             .takes_value(true))
+        .arg(Arg::with_name("password_file")
+            .short("f")
+            .long("password-file")
+            .value_name("PASSWORD_FILE")
+            .help("The password to encrypt/decrypt with will be read from a text file at the path provided. File should be valid UTF-8 and contain only the password with no newline. This or the --password (-p) flag is required if using stdin and/or stdout.")
+            .takes_value(true))
+        .group(ArgGroup::with_name("password_flags")
+            .args(&["password", "password_file"]))
         .get_matches();
 
     let mode = if matches.is_present("encrypt") || matches.is_present("encrypt_stdin") {
@@ -124,12 +137,19 @@ fn do_it() -> Result<(Option<String>, Mode), Box<dyn Error>> {
     } else {
         None
     };
+
+    // get_password needs to only happen if using neither stdin nor stdout: using requires() in clap
+    // password prompting is affected by both stdin and stdout, whereas other printing is affected only by stdout
     let password = if matches.is_present("password") {
         matches.value_of("password").ok_or("couldn't get password value")?.to_string()
+    } else if matches.is_present("password_file") {
+        let pw_file = matches.value_of("password_file").ok_or("could not get value of password file")?.to_string();
+        let p = Path::new(&pw_file);
+        std::fs::read_to_string(p).map_err(|e| format!("could not read password file: {}", e.to_string()))?
     } else {
         get_password(&mode)
     };
-    let ui = Box::new(ProgressUpdater{mode: mode.clone()});
+    let ui = Box::new(ProgressUpdater{mode: mode.clone(), stdout: matches.is_present("stdout")});
     let config = Config::new(&mode, password, filename.map(|f| f.to_string()), output_path.clone(), ui);
     match main_routine(&config) {
         Ok(()) => Ok((output_path, mode)),
