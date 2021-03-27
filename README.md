@@ -1,6 +1,6 @@
 # Cloaker
 
-**Mobile version available at https://cloaker.mobi! Interoperable with the GUI and CLI versions!** [Repo here.](https://github.com/spieglt/CloakerMobile)
+**Mobile version available at https://cloaker.mobi! Interoperable with the GUI and CLI versions!** [Repo here.](https://github.com/spieglt/Cloaker.js)
 
 **Version 4 Release Notes:**
 - Increased speed by ??.
