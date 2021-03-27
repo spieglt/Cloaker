@@ -43,7 +43,7 @@ qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
-QMAKE_LFLAGS_WINDOWS += -static -static-libgcc -static-libstdc++
+#QMAKE_LFLAGS_WINDOWS += -static -static-libgcc -static-libstdc++
 
 unix: LIBS += -L$$PWD/../../adapter/target/release/ -ladapter
 

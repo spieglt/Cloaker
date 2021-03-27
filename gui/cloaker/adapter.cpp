@@ -5,7 +5,7 @@
 #include <QLineEdit>
 
 
-extern "C" void output(uint32_t progress) {
+extern "C" void output(int32_t progress) {
     gMainWindow->updateProgress(progress);
 }
 

@@ -6,6 +6,12 @@ mod tests {
     use itertools::Itertools;
     use std::time::Instant;
 
+    struct ProgressUpdater {}
+
+    impl cloaker::Ui for ProgressUpdater {
+        fn output(&self, _percentage: i32) {}
+    }
+
     #[test]
     fn brute_force_test() -> Result<(), Box<dyn std::error::Error>> {
 
@@ -23,7 +29,7 @@ mod tests {
         let mut out_path = std::env::temp_dir();
         out_path.push("encrypted.txt");
         let out_file = out_path.to_str().unwrap().to_string();
-        let config = cloaker::Config::new(&cloaker::Mode::Encrypt, pw, &in_file, &out_file);
+        let config = cloaker::Config::new(&cloaker::Mode::Encrypt, pw, Some(in_file), Some(out_file.clone()), Box::new(ProgressUpdater{}));
         cloaker::main_routine(&config)?;
 
         // measure frequency of brute-force attempts
@@ -50,7 +56,7 @@ mod tests {
                 .cloned().cloned() // clone it twice, which is weird. we're dealing with references to references at this point I guess so have to undo it twice.
                 .collect::<Vec<char>>(); // and then collect it into a vector of chars.
             let guess: String = guess_chars.into_iter().collect();
-            let c = cloaker::Config::new(&cloaker::Mode::Decrypt, guess.clone(), &out_file, "./result");
+            let c = cloaker::Config::new(&cloaker::Mode::Decrypt, guess.clone(), Some(out_file.clone()), Some("./result".to_string()), Box::new(ProgressUpdater{}));
             assert!(cloaker::main_routine(&c).is_err());
 
             attempts += 1;
