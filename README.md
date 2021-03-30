@@ -1,19 +1,8 @@
 # Cloaker
 
-**Mobile version available at https://cloaker.mobi! Interoperable with the GUI and CLI versions!** [Repo here.](https://github.com/spieglt/Cloaker.js)
+**New Cloaker 4.0 downloads on the [Releases](https://github.com/spieglt/Cloaker/releases) page!**
 
-**Version 4 Release Notes:**
-- Increased speed by ??.
-- Added progress bar to GUI and progress output to CLI.
-- Added CLI flags to:
-    - encrypt/decrypt from stdin (`-E`, `-D`)
-    - encrypt/decrypt to stdout (`-O`)
-    - read password from a file (`-f`) instead of prompting for it
-    - accept password directly with `-p` instead of prompting (not recommended: password will appear in shell history)
-- Changed password hashing from `scryptsalsa208sha256` to `Argon2id`.
-- Windows GUI version builds with MSVC instead of MinGW.
-
-Ready-to-use downloads on the [Releases](https://github.com/spieglt/Cloaker/releases) page
+**Mobile version available at https://cloaker.mobi! Interoperable with this version of Cloaker, both GUI and CLI!** [Code here.](https://github.com/spieglt/Cloaker.js)
 
 ### Very simple cross-platform file encryption
 
@@ -21,10 +10,10 @@ Have you ever wanted to protect a file with a password and found it unnecessaril
 
 ![Demo](demo.gif)
 
-**Data Loss Disclaimer:** if you lose or forget your password, **your data cannot be recovered!** Use a password manager or another secure form of backup. Cloaker uses the pwhash and secretstream APIs of [libsodium](https://github.com/jedisct1/libsodium) via [sodiumoxide](https://github.com/sodiumoxide/sodiumoxide).
+**Data Loss Disclaimer:** if you lose or forget your password, **your data cannot be recovered!** Use a password manager or another secure form of backup. Cloaker uses the `pwhash` and `secretstream` APIs of [libsodium](https://doc.libsodium.org/) via [sodiumoxide](https://github.com/sodiumoxide/sodiumoxide).
 
 # Compilation instructions:
-`cd adapter && cargo build && cargo build --release`. 
+`cd cloaker/adapter; cargo build --release`.
 
 Then open `gui/cloaker/cloaker.pro` in Qt Creator (Qt 5.15.2), make sure kit is 64bit, and build.
 
@@ -32,7 +21,26 @@ If you want to make a distributable on...
 
 **Mac:** use the `macdeployqt` script in your Qt installation's `bin/` directory with the built `.app` bundle as argument.
 
-**Linux:** just use the dynamically linked binary that Qt Creator builds by default, it's more portable on Linux.
+**On Linux and Windows:** make sure Sources are installed for Qt 5.15.2 through the Qt Maintenance Tool.
+
+**Linux Mint 20:** compiling Qt statically is a dark and arcane practice that I've wasted way too much time trying to understand. These instructions build a static version of Qt on Mint 20, and programs built with that Qt version run on a fresh installation of Ubuntu 20. However, you may still find libraries missing if you try to use the Cloaker 4.0 binary from the releases page on other distros. If you have trouble, open an issue, and I'll see if I can help. (Or, if you're using Linux, you might just want to use the CLI version which is much easier to compile.)
+
+Install dependencies (partially-helpful reference [here](https://wiki.qt.io/Building_Qt_5_from_Git)):
+```
+sudo apt install build-essential # C/C++ compiler
+sudo apt install ^libxcb.*-dev # installs all libxcb dev packages
+sudo apt install libx11-xcb-dev
+sudo apt install libxkbcommon-dev libxkbcommon-x11-dev libglib2.0-dev libgtk-3-dev # keyboard, glib, and gtk packages we'll need for the flags we're going to use with the `configure` script
+```
+
+Then compile Qt statically with something like
+```
+$ mkdir ~/qt-static; cd ~/qt-static
+$ ~/Qt/5.15.2/Src/configure -static -release -opensource -confirm-license -skip multimedia -skip webengine -skip wayland -no-compile-examples -nomake examples -no-openssl -no-opengl -ico -xcb -gif -gtk -qt-pcre -bundled-xcb-xinput
+$ make -j8
+```
+
+More documentation on the `configure` command can be found [here](https://doc.qt.io/qt-5/configure-options.html), and all the options can be seen by running `~/Qt/5.15.2/Src/configure -h`. Other helpful resources are the page on [Linux deployment](https://doc.qt.io/qt-5/linux-deployment.html) and [X11 requirements](https://doc.qt.io/qt-5/linux-requirements.html).
 
 **Windows only:** install Visual Studio 2019 Community (including the `Desktop development with C++` feature), launch the `x64 Native Tools Command Prompt` (found in `Start Menu > Visual Studio 2019`) and compile Qt statically with something like:
 ```
@@ -42,7 +50,7 @@ If you want to make a distributable on...
 ```
 Run `rustup default stable-x86_64-pc-windows-msvc` to make sure you're using MSVC, and rerun `cargo build --release` from `adapter/` if you weren't.
 
-Then go to Qt Creator settings, add a new version of Qt, and point to `C:\qt-static\qtbase\bin\qmake.exe`. Then add a new "Kit" that points to this Qt version, and build Release version with that kit selected.
+**Finally, on Linux and Windows:** go to `Qt Creator > Project > Manage Kits > Qt Versions`, add a new version of Qt, and point to `~/qt-static/qtbase/bin/qmake` or `C:\qt-static\qtbase\bin\qmake.exe`. Add a new Kit in the `Kits` tab, and set its `Qt version` to be the static one you just added. On the Projects page, click the plus button by the new Kit under `Build & Run`. Now you can build with the static kit's Release profile in the bottom-left above the play and build buttons.
 
 # CLI compilation instructions
 `cd cli; cargo build --release`. Executable will be at `cloaker/cli/target/release/cloaker_cli`(`.exe`).
