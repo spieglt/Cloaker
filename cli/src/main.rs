@@ -162,7 +162,7 @@ fn get_password(mode: &Mode) -> String {
         Mode::Encrypt => {
             let password = rpassword::prompt_password_stdout("Password (minimum 12 characters, longer is better): ")
                 .expect("could not get password from user");
-            if password.len() > 12 {
+            if password.len() < 12 {
                 println!("Error: password must be at least 12 characters. Exiting.");
                 exit(12);
             }

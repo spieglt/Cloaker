@@ -54,7 +54,7 @@ Outcome passwordPrompts(Mode mode, QString* password) {
         if (!okPw) {
             return cancel;
         }
-        if (password->length() > 12) {
+        if (password->length() < 12) {
             msgBox.setText("Password must be at least 12 characters.");
             msgBox.exec();
             return redo;

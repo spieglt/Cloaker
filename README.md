@@ -6,7 +6,7 @@
 
 ### Very simple cross-platform file encryption
 
-Have you ever wanted to protect a file with a password and found it unnecessarily difficult to do so? Cloaker aims to provide the most straightforward file encryption possible. Just drop a file onto the window, set a password, and choose where to save it. To decrypt, drop the encrypted file on the window, enter the password, and choose the output location. No installation required: on Windows it's a single `.exe`, on Mac an `.app` bundle, and on Linux a `.run` file that links to your system's Qt.
+Have you ever wanted to protect a file with a password and found it unnecessarily difficult to do so? Cloaker aims to provide the most straightforward file encryption possible. Just drop a file onto the window, set a password, and choose where to save it. To decrypt, drop the encrypted file on the window, enter the password, and choose the output location. No installation required: on Windows it's a single `.exe`, on Mac an `.app` bundle, and on Linux a single executable `.run` file.
 
 ![Demo](demo.gif)
 
@@ -40,7 +40,7 @@ $ ~/Qt/5.15.2/Src/configure -static -release -opensource -confirm-license -skip 
 $ make -j8
 ```
 
-More documentation on the `configure` command can be found [here](https://doc.qt.io/qt-5/configure-options.html), and all the options can be seen by running `~/Qt/5.15.2/Src/configure -h`. Other helpful resources are the page on [Linux deployment](https://doc.qt.io/qt-5/linux-deployment.html) and [X11 requirements](https://doc.qt.io/qt-5/linux-requirements.html).
+More documentation on the `configure` command can be found [here](https://doc.qt.io/qt-5/configure-options.html), and all the options can be seen by running `~/Qt/5.15.2/Src/configure -h`. Other helpful resources are the pages on [Linux deployment](https://doc.qt.io/qt-5/linux-deployment.html) and [X11 requirements](https://doc.qt.io/qt-5/linux-requirements.html).
 
 **Windows only:** install Visual Studio 2019 Community (including the `Desktop development with C++` feature), launch the `x64 Native Tools Command Prompt` (found in `Start Menu > Visual Studio 2019`) and compile Qt statically with something like:
 ```
