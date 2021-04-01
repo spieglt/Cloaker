@@ -72,7 +72,7 @@ pub fn decrypt<I: Read, O: Write>(input: &mut I, output: &mut O, password: &str,
             let percentage = (((total_bytes_read as f32) / (size as f32)) * 100.) as i32;
             ui.output(percentage);
         }
-        output.write(&decrypted)?;
+        output.write_all(&decrypted)?;
     }
     ui.output(100);
     Ok(())

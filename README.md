@@ -2,9 +2,9 @@
 
 **New Cloaker 4.0 downloads on the [Releases](https://github.com/spieglt/Cloaker/releases) page!**
 
-**Mobile version available at https://cloaker.mobi! Interoperable with this version of Cloaker, both GUI and CLI!** [Code here.](https://github.com/spieglt/Cloaker.js)
+**Mobile version available at https://cloaker.mobi! Static HTML/CSS/JS/WASM and interoperable with this version of Cloaker.** [Code here.](https://github.com/spieglt/Cloaker.js)
 
-### Very simple cross-platform file encryption
+## Very simple cross-platform file encryption
 
 Have you ever wanted to protect a file with a password and found it unnecessarily difficult to do so? Cloaker aims to provide the most straightforward file encryption possible. Just drop a file onto the window, set a password, and choose where to save it. To decrypt, drop the encrypted file on the window, enter the password, and choose the output location. No installation required: on Windows it's a single `.exe`, on Mac an `.app` bundle, and on Linux a single executable `.run` file.
 
