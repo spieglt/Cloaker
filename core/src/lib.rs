@@ -2,12 +2,11 @@ mod legacy;
 mod os_interface;
 pub use os_interface::*;
 
-use std::{error, fmt};
-use std::io::prelude::*;
 use sodiumoxide::crypto::pwhash::argon2id13;
-use sodiumoxide::crypto::secretstream::
-    {Stream, Tag, ABYTES, HEADERBYTES, KEYBYTES};
 use sodiumoxide::crypto::secretstream::xchacha20poly1305::{Header, Key};
+use sodiumoxide::crypto::secretstream::{Stream, Tag, ABYTES, HEADERBYTES, KEYBYTES};
+use std::io::prelude::*;
+use std::{error, fmt};
 
 const CHUNKSIZE: usize = 1024 * 512;
 const SIGNATURE: [u8; 4] = [0xC1, 0x0A, 0x6B, 0xED];
@@ -18,7 +17,11 @@ pub struct CoreError {
 }
 
 impl CoreError {
-    fn new(msg: &str) -> Self { CoreError{message: msg.to_string()} }
+    fn new(msg: &str) -> Self {
+        CoreError {
+            message: msg.to_string(),
+        }
+    }
 }
 
 impl fmt::Display for CoreError {
@@ -29,12 +32,16 @@ impl fmt::Display for CoreError {
 
 impl error::Error for CoreError {}
 
-pub fn encrypt<I: Read, O: Write>(input: &mut I, output: &mut O, password: &str, ui: &Box<dyn Ui>, filesize: Option<usize>)
-    -> Result<(), Box<dyn error::Error>> {
-
+pub fn encrypt<I: Read, O: Write>(
+    input: &mut I,
+    output: &mut O,
+    password: &str,
+    ui: &Box<dyn Ui>,
+    filesize: Option<usize>,
+) -> Result<(), Box<dyn error::Error>> {
     let mut buffer = vec![0; CHUNKSIZE];
     let mut total_bytes_read = 0;
-    
+
     // write file signature
     output.write_all(&SIGNATURE)?;
 
@@ -42,12 +49,17 @@ pub fn encrypt<I: Read, O: Write>(input: &mut I, output: &mut O, password: &str,
     output.write_all(&salt.0)?;
 
     let mut key = [0u8; KEYBYTES];
-    argon2id13::derive_key(&mut key, password.as_bytes(), &salt,
+    argon2id13::derive_key(
+        &mut key,
+        password.as_bytes(),
+        &salt,
         argon2id13::OPSLIMIT_INTERACTIVE,
-        argon2id13::MEMLIMIT_INTERACTIVE).unwrap();
+        argon2id13::MEMLIMIT_INTERACTIVE,
+    )
+    .unwrap();
     let key = Key(key);
-    let (mut stream, header) = Stream::init_push(&key)
-        .map_err(|_| CoreError::new("init_push failed"))?;
+    let (mut stream, header) =
+        Stream::init_push(&key).map_err(|_| CoreError::new("init_push failed"))?;
     output.write_all(&header.0)?;
     let mut eof = false;
     while !eof {
@@ -61,17 +73,22 @@ pub fn encrypt<I: Read, O: Write>(input: &mut I, output: &mut O, password: &str,
             ui.output(percentage);
         }
         output.write_all(
-            &stream.push(&buffer[..bytes_read], None, tag)
-                .map_err(|_| CoreError::new("Encrypting file failed"))?
+            &stream
+                .push(&buffer[..bytes_read], None, tag)
+                .map_err(|_| CoreError::new("Encrypting file failed"))?,
         )?;
     }
 
     Ok(())
 }
 
-pub fn decrypt<I: Read, O: Write>(input: &mut I, output: &mut O, password: &str, ui: &Box<dyn Ui>, filesize: Option<usize>)
-    -> Result<(), Box<dyn error::Error>> {
-
+pub fn decrypt<I: Read, O: Write>(
+    input: &mut I,
+    output: &mut O,
+    password: &str,
+    ui: &Box<dyn Ui>,
+    filesize: Option<usize>,
+) -> Result<(), Box<dyn error::Error>> {
     // make sure file is at least prefix + salt + header
     if let Some(size) = filesize {
         if !(size >= argon2id13::SALTBYTES + HEADERBYTES + SIGNATURE.len()) {
@@ -89,19 +106,24 @@ pub fn decrypt<I: Read, O: Write>(input: &mut I, output: &mut O, password: &str,
     let header = Header(header);
 
     let mut key = [0u8; KEYBYTES];
-    argon2id13::derive_key(&mut key, password.as_bytes(), &salt,
+    argon2id13::derive_key(
+        &mut key,
+        password.as_bytes(),
+        &salt,
         argon2id13::OPSLIMIT_INTERACTIVE,
-        argon2id13::MEMLIMIT_INTERACTIVE)
-        .map_err(|_| CoreError::new("Deriving key failed"))?;
+        argon2id13::MEMLIMIT_INTERACTIVE,
+    )
+    .map_err(|_| CoreError::new("Deriving key failed"))?;
     let key = Key(key);
 
     let mut buffer = vec![0u8; CHUNKSIZE + ABYTES];
-    let mut stream = Stream::init_pull(&header, &key)
-        .map_err(|_| CoreError::new("init_pull failed"))?;
+    let mut stream =
+        Stream::init_pull(&header, &key).map_err(|_| CoreError::new("init_pull failed"))?;
     while stream.is_not_finalized() {
         let (_eof, bytes_read) = maybe_fill_buffer(input, &mut buffer)?;
         total_bytes_read += bytes_read;
-        let (decrypted, _tag) = stream.pull(&buffer[..bytes_read], None)
+        let (decrypted, _tag) = stream
+            .pull(&buffer[..bytes_read], None)
             .map_err(|_| CoreError::new("Incorrect password"))?;
         if let Some(size) = filesize {
             let percentage = (((total_bytes_read as f32) / (size as f32)) * 100.) as i32;
@@ -114,7 +136,10 @@ pub fn decrypt<I: Read, O: Write>(input: &mut I, output: &mut O, password: &str,
 }
 
 // returns Ok(true, bytes_read) if EOF, and Ok(false, bytes_read) if buffer was filled without EOF
-fn maybe_fill_buffer<R: Read>(reader: &mut R, buffer: &mut Vec<u8>) -> std::io::Result<(bool, usize)> {
+fn maybe_fill_buffer<R: Read>(
+    reader: &mut R,
+    buffer: &mut Vec<u8>,
+) -> std::io::Result<(bool, usize)> {
     let mut bytes_read = 0;
     while bytes_read < buffer.len() {
         match reader.read(&mut buffer[bytes_read..]) {

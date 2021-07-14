@@ -1,8 +1,7 @@
-
-use std::error::Error;
-use std::fs::{File, remove_file};
-use std::io::prelude::*;
 use sodiumoxide;
+use std::error::Error;
+use std::fs::{remove_file, File};
+use std::io::prelude::*;
 
 #[derive(Clone, Debug)]
 pub enum Mode {
@@ -23,9 +22,21 @@ pub trait Ui {
 }
 
 impl Config {
-    pub fn new(_mode: &Mode, password: String, filename: Option<String>, out_file: Option<String>, ui: Box<dyn Ui>) -> Self {
+    pub fn new(
+        _mode: &Mode,
+        password: String,
+        filename: Option<String>,
+        out_file: Option<String>,
+        ui: Box<dyn Ui>,
+    ) -> Self {
         let mode: Mode = _mode.clone();
-        Config{mode, password, filename, out_file, ui}
+        Config {
+            mode,
+            password,
+            filename,
+            out_file,
+            ui,
+        }
     }
 }
 
@@ -53,12 +64,14 @@ pub fn main_routine(c: &Config) -> Result<(), Box<dyn Error>> {
                 Ok(()) => (),
                 Err(e) => {
                     if let Some(out_file) = &c.out_file {
-                        remove_file(&out_file).map_err(|e2| format!("{}. Could not delete output file: {}.", e, e2))?;
+                        remove_file(&out_file).map_err(|e2| {
+                            format!("{}. Could not delete output file: {}.", e, e2)
+                        })?;
                     }
                     Err(e)?
-                },
+                }
             };
-        },
+        }
         Mode::Decrypt => {
             // start reading stream before handing to encrypt/decrypt
             // legacy decrypt might need a first-four-bytes param
@@ -70,26 +83,41 @@ pub fn main_routine(c: &Config) -> Result<(), Box<dyn Error>> {
                         Ok(()) => (),
                         Err(e) => {
                             if let Some(out_file) = &c.out_file {
-                                remove_file(&out_file).map_err(|e2| format!("{}. Could not delete output file: {}.", e, e2))?;
+                                remove_file(&out_file).map_err(|e2| {
+                                    format!("{}. Could not delete output file: {}.", e, e2)
+                                })?;
                             }
                             Err(e)?
-                        },
+                        }
                     };
-                },
+                }
                 _ => {
-                    let first_four = if first_four != crate::legacy::SIGNATURE { Some(first_four) } else { None };
-                    match crate::legacy::decrypt(&mut input, &mut output, &c.password, &c.ui, filesize, first_four) {
+                    let first_four = if first_four != crate::legacy::SIGNATURE {
+                        Some(first_four)
+                    } else {
+                        None
+                    };
+                    match crate::legacy::decrypt(
+                        &mut input,
+                        &mut output,
+                        &c.password,
+                        &c.ui,
+                        filesize,
+                        first_four,
+                    ) {
                         Ok(()) => (),
                         Err(e) => {
                             if let Some(out_file) = &c.out_file {
-                                remove_file(&out_file).map_err(|e2| format!("{}. Could not delete output file: {}.", e, e2))?;
+                                remove_file(&out_file).map_err(|e2| {
+                                    format!("{}. Could not delete output file: {}.", e, e2)
+                                })?;
                             }
                             Err(e)?
-                        },
+                        }
                     };
-                },
+                }
             }
-        },
+        }
     }
     Ok(())
 }
