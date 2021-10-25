@@ -6,3 +6,6 @@ edition = "2018"
 
 [dependencies]
 sodiumoxide = "0.2.6"
+argon2 = "0.3.1"
+crypto_secretstream = "0.0.1"
+rand_core = { version = "0.6", features = ["std"] }
