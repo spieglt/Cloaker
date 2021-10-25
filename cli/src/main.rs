@@ -1,4 +1,4 @@
-mod brute_force; // test
+mod test;
 
 use cloaker::*;
 
