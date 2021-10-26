@@ -129,8 +129,8 @@ fn file_or_stdin(reader: Option<File>) -> Box<dyn Read> {
     }
 }
 
-fn file_or_stdout(reader: Option<File>) -> Box<dyn Write> {
-    match reader {
+fn file_or_stdout(writer: Option<File>) -> Box<dyn Write> {
+    match writer {
         Some(file) => Box::new(file),
         None => Box::new(std::io::stdout()),
     }

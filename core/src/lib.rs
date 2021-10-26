@@ -85,6 +85,9 @@ pub fn decrypt<I: Read, O: Write>(
     ui: &Box<dyn Ui>,
     filesize: Option<usize>,
 ) -> Result<(), Box<dyn error::Error>> {
+
+    // if new signature, use argon2. if old signature, use scrypt. if no signature, use scrypt.
+
     // make sure file is at least prefix + salt + header
     if let Some(size) = filesize {
         if !(size >= SALTBYTES + Header::BYTES + SIGNATURE.len()) {
@@ -107,7 +110,10 @@ pub fn decrypt<I: Read, O: Write>(
     while tag != Tag::Final {
         let (_eof, mut buffer) = read_up_to(input, CHUNKSIZE + ABYTES)?;
         total_bytes_read += buffer.len();
-        tag = stream.pull(&mut buffer, &[]).map_err(|e| e.to_string())?;
+        tag = match stream.pull(&mut buffer, &[]) {
+            Ok(tag) => tag,
+            Err(_) => return Err("Error: Incorrect password".to_string().into())
+        };
         if let Some(size) = filesize {
             let percentage = (((total_bytes_read as f32) / (size as f32)) * 100.) as i32;
             ui.output(percentage);

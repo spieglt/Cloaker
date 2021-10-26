@@ -17,30 +17,42 @@ mod tests {
     #[test]
     fn version_decrypt() {
         // TODO: make this not windows-specific.
-        let mut build = Command::new("cmd")
+        let build = Command::new("cmd")
             .args(["/C", "cargo build --release"])
             .output()
             .expect("oh no");
         println!("{:?}", String::from_utf8_lossy(&build.stderr));
 
-        let mut version1 = Command::new("cmd");
-        version1.args(["/C", "target\\release\\cloaker_cli.exe -d ../test/1.1.txt.cloaker -p 111111111111"]);
-        let mut output = version1.output().expect("oh no");
-        println!("{:?}", output.stderr);
-        assert_eq!(output.stderr, vec![]); // check that stderr is empty
+        let version1 = Command::new("cmd")
+            .args(["/C", "target\\release\\cloaker_cli.exe -d ../test/1.1.txt.cloaker -p 111111111111"])
+            .output()
+            .expect("oh no");
+        println!("{:?}", String::from_utf8_lossy(&version1.stderr));
+        assert_eq!(version1.stderr, vec![]); // check that stderr is empty
 
-        let mut version2 = Command::new("cmd");
-        version2.args(["/C", "target\\release\\cloaker_cli.exe -d ../test/2.1.txt.cloaker -p 111111111111"]);
-        output = version2.output().expect("oh no");
-        assert_eq!(output.stderr, vec![]);
+        let version2 = Command::new("cmd")
+            .args(["/C", "target\\release\\cloaker_cli.exe -d ../test/2.1.txt.cloaker -p 111111111111"])
+            .output()
+            .expect("oh no");
+        println!("{:?}", String::from_utf8_lossy(&version2.stderr));
+        assert_eq!(version2.stderr, vec![]);
 
-        let mut version3 = Command::new("cmd");
-        version3.args(["/C", "target\\release\\cloaker_cli.exe -d ../test/3.1.txt.cloaker -p 111111111111"]);
-        let output = version3.output().expect("oh no");
-        assert_eq!(output.stderr, vec![]);
+        let version3 = Command::new("cmd")
+            .args(["/C", "target\\release\\cloaker_cli.exe -d ../test/3.1.txt.cloaker -p 111111111111"])
+            .output()
+            .expect("oh no");
+        println!("{:?}", String::from_utf8_lossy(&version3.stderr));
+        assert_eq!(version3.stderr, vec![]);
+
+        let version4 = Command::new("cmd")
+            .args(["/C", "target\\release\\cloaker_cli.exe -d ../test/4.1.txt.cloaker -p 1111111311111"])
+            .output()
+            .expect("oh no");
+        println!("{:?}", String::from_utf8_lossy(&version4.stderr));
+        assert_eq!(version4.stderr, vec![]);
     }
 
-    #[test]
+    // #[test]
     // TODO: make this work for a few seconds then exit
     fn brute_force_test() -> Result<(), Box<dyn std::error::Error>> {
         // generate random file, write to temp location
