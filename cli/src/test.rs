@@ -45,14 +45,14 @@ mod tests {
         assert_eq!(version3.stderr, vec![]);
 
         let version4 = Command::new("cmd")
-            .args(["/C", "target\\release\\cloaker_cli.exe -d ../test/4.1.txt.cloaker -p 1111111311111"])
+            .args(["/C", "target\\release\\cloaker_cli.exe -d ../test/4.1.txt.cloaker -p 111111111111"])
             .output()
             .expect("oh no");
         println!("{:?}", String::from_utf8_lossy(&version4.stderr));
         assert_eq!(version4.stderr, vec![]);
     }
 
-    // #[test]
+    #[test]
     // TODO: make this work for a few seconds then exit
     fn brute_force_test() -> Result<(), Box<dyn std::error::Error>> {
         // generate random file, write to temp location
@@ -131,6 +131,7 @@ mod tests {
                 println!("guess: {}", guess);
                 println!("at {:.3} attempts per second, it would take {:.2} years to test all 12-character passwords including lower-/uppercase letters, numbers, and symbols.", attempts_per_sec, num_years);
             }
+            if attempts == 300 { break }
         }
         Ok(())
     }

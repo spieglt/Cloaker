@@ -1,4 +1,3 @@
-use sodiumoxide;
 use std::error::Error;
 use std::fs::{remove_file, File};
 use std::io::prelude::*;
@@ -41,7 +40,6 @@ impl Config {
 }
 
 pub fn main_routine(c: &Config) -> Result<(), Box<dyn Error>> {
-    sodiumoxide::init().map_err(|_| "sodiumoxide init failed")?;
     let in_file = match &c.filename {
         Some(s) => Some(File::open(s)?),
         None => None,
@@ -73,50 +71,17 @@ pub fn main_routine(c: &Config) -> Result<(), Box<dyn Error>> {
             };
         }
         Mode::Decrypt => {
-            // start reading stream before handing to encrypt/decrypt
-            // legacy decrypt might need a first-four-bytes param
-            let mut first_four = [0u8; 4];
-            input.read_exact(&mut first_four)?;
-            match first_four {
-                crate::SIGNATURE => {
-                    match crate::decrypt(&mut input, &mut output, &c.password, &c.ui, filesize) {
-                        Ok(()) => (),
-                        Err(e) => {
-                            if let Some(out_file) = &c.out_file {
-                                remove_file(&out_file).map_err(|e2| {
-                                    format!("{}. Could not delete output file: {}.", e, e2)
-                                })?;
-                            }
-                            Err(e)?
-                        }
-                    };
+            match crate::decrypt(&mut input, &mut output, &c.password, &c.ui, filesize) {
+                Ok(()) => (),
+                Err(e) => {
+                    if let Some(out_file) = &c.out_file {
+                        remove_file(&out_file).map_err(|e2| {
+                            format!("{}. Could not delete output file: {}.", e, e2)
+                        })?;
+                    }
+                    Err(e)?
                 }
-                _ => {
-                    let first_four = if first_four != crate::legacy::SIGNATURE {
-                        Some(first_four)
-                    } else {
-                        None
-                    };
-                    match crate::legacy::decrypt(
-                        &mut input,
-                        &mut output,
-                        &c.password,
-                        &c.ui,
-                        filesize,
-                        first_four,
-                    ) {
-                        Ok(()) => (),
-                        Err(e) => {
-                            if let Some(out_file) = &c.out_file {
-                                remove_file(&out_file).map_err(|e2| {
-                                    format!("{}. Could not delete output file: {}.", e, e2)
-                                })?;
-                            }
-                            Err(e)?
-                        }
-                    };
-                }
-            }
+            };
         }
     }
     Ok(())

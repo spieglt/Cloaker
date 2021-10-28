@@ -1,4 +1,3 @@
-mod legacy;
 mod os_interface;
 pub use os_interface::*;
 
@@ -9,13 +8,16 @@ use argon2::{
     },
     Argon2, Algorithm, ParamsBuilder, Version,
 };
+use scrypt;
 use crypto_secretstream::*;
 use std::io::prelude::*;
 use std::{error, fmt};
 
 const CHUNKSIZE: usize = 1024 * 512;
 const SIGNATURE: [u8; 4] = [0xC1, 0x0A, 0x6B, 0xED];
+const LEGACY_SIGNATURE: [u8; 4] = [0xC1, 0x0A, 0x4B, 0xED];
 const SALTBYTES: usize = 16;
+const LEGACY_SALTBYTES: usize = 32;
 const KEYBYTES: usize = 32;
 const ABYTES: usize = 17;
 
@@ -56,7 +58,7 @@ pub fn encrypt<I: Read, O: Write>(
     OsRng.fill_bytes(&mut salt_bytes);
     output.write_all(&salt_bytes)?;
     let salt = SaltString::b64_encode(&salt_bytes).map_err(|e| e.to_string())?;
-    let key = get_key(password, salt)?;
+    let key = get_argon2_key(password, salt)?;
     let (header, mut stream) = PushStream::init(&mut rand_core::OsRng, &key);
     output.write_all(header.as_ref())?;
 
@@ -86,8 +88,6 @@ pub fn decrypt<I: Read, O: Write>(
     filesize: Option<usize>,
 ) -> Result<(), Box<dyn error::Error>> {
 
-    // if new signature, use argon2. if old signature, use scrypt. if no signature, use scrypt.
-
     // make sure file is at least prefix + salt + header
     if let Some(size) = filesize {
         if !(size >= SALTBYTES + Header::BYTES + SIGNATURE.len()) {
@@ -97,13 +97,29 @@ pub fn decrypt<I: Read, O: Write>(
     let mut total_bytes_read = 0;
 
     let mut salt = [0u8; SALTBYTES];
-    input.read_exact(&mut salt)?;
+    let mut legacy_salt = [0u8; LEGACY_SALTBYTES];
+    let mut first_four = [0u8; 4];
+    input.read_exact(&mut first_four)?;
+    match first_four {
+        crate::SIGNATURE => input.read_exact(&mut salt)?,
+        crate::LEGACY_SIGNATURE => input.read_exact(&mut legacy_salt)?,
+        _ => {
+            // if signature was not present, and we're treating this as a cloaker 1.0 file because of the
+            // .cloaker extension or because -d was used from CLI, then use those bytes for the salt.
+            legacy_salt[..4].copy_from_slice(&first_four);
+            input.read_exact(&mut legacy_salt[4..])?;
+        },
+    }
     let salt = SaltString::b64_encode(&salt).map_err(|e| e.to_string())?;
+    let legacy_salt = SaltString::b64_encode(&legacy_salt).map_err(|e| e.to_string())?;
 
     let mut header = [0u8; Header::BYTES];
     input.read_exact(&mut header)?;
     let header = Header::from(header);
-    let key = get_key(password, salt)?;
+    let key = match first_four {
+        crate::SIGNATURE => get_argon2_key(password, salt)?,
+        _ => get_scrypt_key(password, legacy_salt)?,
+    };
     let mut stream = PullStream::init(header, &key);
 
     let mut tag = Tag::Message;
@@ -145,13 +161,25 @@ fn read_up_to<R: Read>(
     Ok((false, buffer))
 }
 
-fn get_key(password: &str, salt: SaltString) -> Result<Key, Box <dyn error::Error>> {
+fn get_argon2_key(password: &str, salt: SaltString) -> Result<Key, Box <dyn error::Error>> {
     let mut pb = ParamsBuilder::new();
     pb.m_cost(0x10000).map_err(|e| e.to_string())?;
     pb.t_cost(2).map_err(|e| e.to_string())?;
     let params = pb.params().map_err(|e| e.to_string())?;
     let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
     let key = argon2.hash_password(password.as_bytes(), &salt).map_err(|e| e.to_string())?;
+    let key_hash = key.hash.ok_or_else(|| "\nno hash in key")?;
+    let key_bytes = key_hash.as_bytes();
+    let mut key_array = [0u8; KEYBYTES];
+    for i in 0..key_array.len() {
+        key_array[i] = key_bytes[i];
+    }
+    Ok(Key::from(key_array))
+}
+
+fn get_scrypt_key(password: &str, salt: SaltString) -> Result<Key, Box <dyn error::Error>> {
+    let params = scrypt::Params::new(14, 8, 1).unwrap();
+    let key = scrypt::Scrypt.hash_password_customized(password.as_bytes(), None, None, params, &salt)?;
     let key_hash = key.hash.ok_or_else(|| "\nno hash in key")?;
     let key_bytes = key_hash.as_bytes();
     let mut key_array = [0u8; KEYBYTES];
