@@ -25,9 +25,11 @@ jobs:
           - os: windows-latest
             artifact: Cloaker-windows.zip
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
         with:
           workspaces: |
             cli -> target
@@ -48,12 +50,20 @@ jobs:
 
       # linuxdeploy rejects icons that are not a standard size, which is why assets/icon.png is
       # 256x256. APPIMAGE_EXTRACT_AND_RUN avoids needing FUSE on the runner.
+      #
+      # linuxdeploy assembles the AppImage we ship, so it is pinned to a tagged release and checked
+      # against that release's SHA-256 instead of taking whatever the moving "continuous" build
+      # happens to be. To upgrade, change both values; GitHub lists each asset's digest on the
+      # release page and in its API.
       - name: Package AppImage
         if: runner.os == 'Linux'
         env:
           APPIMAGE_EXTRACT_AND_RUN: 1
+          LINUXDEPLOY_VERSION: 1-alpha-20251107-1
+          LINUXDEPLOY_SHA256: c20cd71e3a4e3b80c3483cef793cda3f4e990aca14014d23c544ca3ce1270b4d
         run: |
-          curl -sSLo linuxdeploy https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          curl -fsSLo linuxdeploy "https://github.com/linuxdeploy/linuxdeploy/releases/download/${LINUXDEPLOY_VERSION}/linuxdeploy-x86_64.AppImage"
+          echo "${LINUXDEPLOY_SHA256}  linuxdeploy" | sha256sum --check --strict
           chmod +x linuxdeploy
           cp gui/target/release/cloaker .
           cp gui/assets/icon.png cloaker.png
@@ -80,7 +90,7 @@ jobs:
           gui/target/release/cloaker.exe --version
           Compress-Archive -Path gui/target/release/cloaker.exe, cli/target/release/cloaker_cli.exe -DestinationPath ${{ matrix.artifact }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.artifact }}
@@ -91,10 +101,10 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           merge-multiple: true
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           draft: true
           generate_release_notes: true
