@@ -10,6 +10,7 @@ dryoc = "1.0"
 argon2 = "0.6"
 scrypt = "0.12"
 zeroize = "1.8"
+same-file = "1"
 
 [dev-dependencies]
 # kept as the reference implementation that the compatibility tests check the format against

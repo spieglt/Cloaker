@@ -87,6 +87,7 @@ version = "5.0.0"
 dependencies = [
  "argon2",
  "dryoc",
+ "same-file",
  "scrypt",
  "sodiumoxide",
  "zeroize",

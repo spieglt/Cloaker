@@ -1,5 +1,5 @@
 use std::error::Error;
-use std::fs::{canonicalize, remove_file, File};
+use std::fs::{remove_file, File};
 use std::io::prelude::*;
 use std::path::Path;
 
@@ -74,9 +74,11 @@ enum Work {
 }
 
 pub fn main_routine(c: &Config) -> Result<(), Box<dyn Error>> {
-    // creating the output file truncates it, so make sure it isn't also the input
+    // creating the output file truncates it, so make sure it isn't also the input. This compares
+    // the files themselves rather than their paths, so a hard link or symlink to the input counts.
     if let (Some(in_name), Some(out_name)) = (&c.filename, &c.out_file) {
-        if same_file(in_name, out_name) {
+        // an error here means the output doesn't exist yet, which is the usual case
+        if same_file::is_same_file(in_name, out_name).unwrap_or(false) {
             return Err(
                 "Input and output are the same file. Please choose another output path.".into(),
             );
@@ -150,14 +152,6 @@ pub fn main_routine(c: &Config) -> Result<(), Box<dyn Error>> {
         return Err(e);
     }
     Ok(())
-}
-
-// true only if both paths exist and resolve to the same file
-fn same_file(a: &str, b: &str) -> bool {
-    match (canonicalize(a), canonicalize(b)) {
-        (Ok(a), Ok(b)) => a == b,
-        _ => false,
-    }
 }
 
 fn file_or_stdin(reader: Option<File>) -> Box<dyn Read> {

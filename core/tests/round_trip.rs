@@ -157,6 +157,35 @@ fn unreadable_input_does_not_truncate_an_existing_output_file() {
 }
 
 #[test]
+fn refuses_to_write_over_a_hard_link_to_its_own_input() {
+    let dir = TempDir::new("hard-link");
+    let file = dir.file("original.bin");
+    write(&file, b"still here").unwrap();
+    // a hard link is a second name for the same file, so its path resolves differently from the
+    // input's even though writing to it would destroy the input
+    let link = dir.file("another-name.bin");
+    std::fs::hard_link(&file, &link).unwrap();
+
+    let err = run(Mode::Encrypt, PASSWORD, &file, &link).unwrap_err();
+    assert!(err.contains("same file"), "unexpected error: {}", err);
+    assert_eq!(read(&file).unwrap(), b"still here");
+}
+
+#[cfg(unix)]
+#[test]
+fn refuses_to_write_over_a_symlink_to_its_own_input() {
+    let dir = TempDir::new("symlink");
+    let file = dir.file("original.bin");
+    write(&file, b"still here").unwrap();
+    let link = dir.file("pointer.bin");
+    std::os::unix::fs::symlink(&file, &link).unwrap();
+
+    let err = run(Mode::Encrypt, PASSWORD, &file, &link).unwrap_err();
+    assert!(err.contains("same file"), "unexpected error: {}", err);
+    assert_eq!(read(&file).unwrap(), b"still here");
+}
+
+#[test]
 fn refuses_to_write_over_its_own_input() {
     let dir = TempDir::new("same-file");
     let file = dir.file("in-place.bin");
