@@ -8,14 +8,13 @@ unaffected. That is the claim to be most careful about before publishing.
 
 Things the test suite cannot cover:
 
-- [ ] **Linux GUI pass.** Drag and drop a file (the tests can't simulate a real drop), drop a folder
-      and several files at once, cancel the save dialog, save over an existing file, Tab and Enter
-      through the password prompt, and run a multi-gigabyte file to watch the progress bar move and
-      the window stay responsive.
-- [ ] **Windows build.** Never compiled there. Check the window opens with no console behind it,
-      drag and drop works, and the file dialog looks right. The exe has no icon yet — see gaps below.
-- [ ] **macOS build.** Never compiled there. Check the `.app` opens, the icon appears, and the file
-      dialog works. It will be unsigned: first launch needs right-click → Open.
+- [x] **Windows** builds and works (confirmed by hand). The exe still has no icon — see gaps below.
+- [x] **macOS** builds and works (confirmed by hand). Still unsigned — see gaps below.
+- [x] **Linux: drag and drop, and saving** work (confirmed by hand; the tests can't simulate a real
+      drop).
+- [ ] **Linux: the rest of the GUI pass.** Drop a folder and several files at once, cancel the save
+      dialog, save over an existing file, Tab and Enter through the password prompt, and run a
+      multi-gigabyte file to watch the progress bar move and the window stay responsive.
 - [ ] **Cloaker.js interop.** Encrypt at cloaker.mobi and decrypt on the desktop, then the reverse.
       The format is verified against libsodium in `core/tests/compatibility.rs`, but nothing has
       exercised the browser implementation.
@@ -58,6 +57,8 @@ Things the test suite cannot cover:
   files in both directions.
 - The AppImage has been built with linuxdeploy on this machine and launches, both headless
   (`--version`) and with a file argument.
+- Built and run by hand on Windows and macOS; on Linux, drag and drop and saving confirmed.
+- A fresh clone of the branch passes all 41 tests, fixtures included.
 
 ## Release notes draft
 
