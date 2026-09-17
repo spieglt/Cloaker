@@ -1,6 +1,6 @@
 # Cloaker
 
-**New Cloaker 4.0 downloads on the [Releases](https://github.com/spieglt/Cloaker/releases) page!**
+**New Cloaker 5.0 downloads on the [Releases](https://github.com/spieglt/Cloaker/releases) page!**
 
 **Mobile version available at https://cloaker.mobi! Static HTML/CSS/JS/WASM and interoperable with this version of Cloaker.** [Code here.](https://github.com/spieglt/Cloaker.js)
 
@@ -10,31 +10,64 @@ Have you ever wanted to protect a file with a password and found it unnecessaril
 
 ![Demo](demo.gif)
 
-**Data Loss Disclaimer:** if you lose or forget your password, **your data cannot be recovered!** Use a password manager or another secure form of backup. Cloaker uses the `pwhash` and `secretstream` APIs of [libsodium](https://doc.libsodium.org/) via [sodiumoxide](https://github.com/sodiumoxide/sodiumoxide).
+**Data Loss Disclaimer:** if you lose or forget your password, **your data cannot be recovered!** Use a password manager or another secure form of backup.
 
-# Compilation instructions:
-`cd cloaker/adapter; cargo build --release`.
+Cloaker's file format is [libsodium](https://doc.libsodium.org/)'s: XChaCha20-Poly1305 `secretstream` for the data, with the key derived by `crypto_pwhash` (Argon2id, interactive limits). Since version 5.0 the implementation is pure Rust — [dryoc](https://github.com/brndnmtthws/dryoc) for the secretstream and [RustCrypto](https://github.com/RustCrypto/password-hashes)'s `argon2` and `scrypt` for key derivation — so files stay interoperable with earlier versions and with [Cloaker.js](https://github.com/spieglt/Cloaker.js), and there is no C library to build. The tests check every format against libsodium itself.
 
-Then open `gui/cloaker/cloaker.pro` in Qt Creator (Qt 5.15.2), make sure kit is Release and 64bit, and build.
+# Compilation instructions
+
+Cloaker is pure Rust now — the Qt/C++ GUI was replaced with an [egui](https://github.com/emilk/egui)
+one in version 5.0, so there is no Qt installation, no Qt Creator and no static Qt build to set up.
+
+```
+cd cloaker/gui; cargo build --release
+```
+
+The executable lands at `cloaker/gui/target/release/cloaker`(`.exe`) and is self-contained: on
+Windows and Mac there is nothing else to ship, and on Linux it needs only the usual X11/Wayland and
+OpenGL libraries that a desktop already has.
 
 If you want to make a distributable on...
 
-**Linux:** download [linuxdeployqt](https://github.com/probonopd/linuxdeployqt/releases). Navigate to the folder with the executable built by Qt (i.e. `cloaker/gui/\[release build folder\]`) and run something like `linuxdeployqt ./cloaker -appimage`. Read the instructions at [linuxdeployqt](https://github.com/probonopd/linuxdeployqt), you may have to make a `cloaker.desktop` file or add a line to it that says `Categories=Utilities;`. It should output an `.AppImage` file that includes all the libraries Cloaker needs, and will run on a wide variety of Linux distributions.
+**Linux:** download [linuxdeploy](https://github.com/linuxdeploy/linuxdeploy/releases), then from a
+scratch directory:
 
-**Mac:** use the `macdeployqt` script in your Qt installation's `bin/` directory with the built `.app` bundle as argument.
-
-**Windows:** make sure Sources are installed for Qt 5.15.2 through the Qt Maintenance Tool. Then install Visual Studio 2019 Community (including the `Desktop development with C++` feature), launch the `x64 Native Tools Command Prompt` (found in `Start Menu > Visual Studio 2019`) and compile Qt statically with something like:
 ```
-> cd C:\; mkdir qt-static; cd qt-static
-> C:\Qt\5.15.2\Src\configure.bat -release -static -no-pch -optimize-size -opengl desktop -platform win32-msvc -skip webengine -nomake tools -nomake tests -nomake examples
-> nmake.exe
+cp gui/target/release/cloaker .
+cp gui/assets/icon.png cloaker.png
+APPIMAGE_EXTRACT_AND_RUN=1 ./linuxdeploy-x86_64.AppImage --appdir AppDir \
+    -e cloaker -d gui/assets/cloaker.desktop -i cloaker.png --output appimage
 ```
-Run `rustup default stable-x86_64-pc-windows-msvc` to make sure you're using MSVC, and rerun `cargo build --release` from `adapter/` if you weren't.
 
-Finally, go to `Qt Creator > Project > Manage Kits > Qt Versions`, add a new version of Qt, and point to `C:\qt-static\qtbase\bin\qmake.exe`. Add a new Kit in the `Kits` tab, and set its `Qt version` to be the static one you just added. On the Projects page, click the plus button by the new Kit under `Build & Run`. Now you can build with the static kit's Release profile in the bottom-left above the play and build buttons.
+That produces a ~7 MB `Cloaker-x86_64.AppImage`. The icon has to be one of the sizes linuxdeploy
+accepts (`gui/assets/icon.png` is 256x256) or it refuses to deploy it, and
+`APPIMAGE_EXTRACT_AND_RUN` avoids needing FUSE. `.github/workflows/release.yml` does all of this
+automatically on a tag.
 
-# CLI compilation instructions
-`cd cli; cargo build --release`. Executable will be at `cloaker/cli/target/release/cloaker_cli`(`.exe`).
+A Linux executable can't carry its own icon the way a Windows `.exe` or a Mac `.app` can: the icon
+you see on the running window is embedded in the program, but the launcher icon comes from a
+`.desktop` file plus an icon installed into the hicolor theme. To install Cloaker for the current
+user:
+
+```
+install -Dm755 gui/target/release/cloaker ~/.local/bin/cloaker
+install -Dm644 gui/assets/icon.png ~/.local/share/icons/hicolor/256x256/apps/cloaker.png
+install -Dm644 gui/assets/cloaker.desktop ~/.local/share/applications/cloaker.desktop
+update-desktop-database ~/.local/share/applications
+```
+
+`~/.local/bin` needs to be on your `PATH` for the desktop entry's `Exec=cloaker %f` to resolve. The
+AppImage already contains both the desktop file and the icon, so desktop environments with AppImage
+integration pick them up without any of this.
+
+**Mac:** assemble the bundle from `gui/assets/Info.plist` and `gui/assets/macCloakerLogo.icns` —
+see the macOS step in `.github/workflows/release.yml`, which does it in a few lines of `cp`.
+
+**Windows:** the `.exe` is already a single self-contained file. To give it the Cloaker icon, add a
+build script using [winresource](https://github.com/BenjaminRi/winresource) pointing at
+`gui/assets/cloaker.ico`.
+
+Release checklist and known gaps: [RELEASE.md](RELEASE.md).
 
 # Planned features:
 - Change minimum password length to 14 or 16?
@@ -43,7 +76,7 @@ Finally, go to `Qt Creator > Project > Manage Kits > Qt Versions`, add a new ver
 - Please tell me about them.
 - Backward compatibility notes:
     - to decrypt a file made with version 1.0 or 1.1 of Cloaker (with Encrypt and Decrypt buttons), the filename must end with the ".cloaker" extension. Files encrypted with later versions are not subject to this restriction.
-    - Cloaker version 4 can decrypt files that were encrypted with previous versions, but previous versions cannot decrypt files encrypted with version 4+.
+    - Cloaker 5 writes the same file format as Cloaker 4, so the two can read each other's files. Both can decrypt files written by earlier versions, but versions before 4 cannot read files written by 4 or 5.
 
 If you've used Cloaker, please send me feedback and thank you for your interest!
 

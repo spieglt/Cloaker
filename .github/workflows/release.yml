@@ -1,0 +1,104 @@
+name: Release
+
+# Cutting a release: bump the versions, then tag and push (e.g. v5.0.0). This builds all three
+# platforms and attaches the artifacts to a draft release for you to check before publishing.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: Cloaker-x86_64.AppImage
+          - os: macos-latest
+            artifact: Cloaker-macos.zip
+          - os: windows-latest
+            artifact: Cloaker-windows.zip
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            cli -> target
+            gui -> target
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            libgl1-mesa-dev libxkbcommon-dev libwayland-dev \
+            libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev
+
+      - name: Build
+        run: |
+          cargo build --release --manifest-path cli/Cargo.toml
+          cargo build --release --manifest-path gui/Cargo.toml
+
+      # linuxdeploy rejects icons that are not a standard size, which is why assets/icon.png is
+      # 256x256. APPIMAGE_EXTRACT_AND_RUN avoids needing FUSE on the runner.
+      - name: Package AppImage
+        if: runner.os == 'Linux'
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: 1
+        run: |
+          curl -sSLo linuxdeploy https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          chmod +x linuxdeploy
+          cp gui/target/release/cloaker .
+          cp gui/assets/icon.png cloaker.png
+          ./linuxdeploy --appdir AppDir -e cloaker -d gui/assets/cloaker.desktop -i cloaker.png --output appimage
+          mv Cloaker*.AppImage "${{ matrix.artifact }}"
+          # smoke test: the bundle has to start and report its version without a display
+          ./"${{ matrix.artifact }}" --version
+
+      - name: Package macOS app bundle
+        if: runner.os == 'macOS'
+        run: |
+          APP=Cloaker.app
+          mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+          cp gui/target/release/cloaker "$APP/Contents/MacOS/cloaker"
+          cp gui/assets/macCloakerLogo.icns "$APP/Contents/Resources/cloaker.icns"
+          cp gui/assets/Info.plist "$APP/Contents/Info.plist"
+          ./gui/target/release/cloaker --version
+          cp cli/target/release/cloaker_cli .
+          zip -r "${{ matrix.artifact }}" "$APP" cloaker_cli
+
+      - name: Package Windows executables
+        if: runner.os == 'Windows'
+        run: |
+          gui/target/release/cloaker.exe --version
+          Compress-Archive -Path gui/target/release/cloaker.exe, cli/target/release/cloaker_cli.exe -DestinationPath ${{ matrix.artifact }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}
+
+  draft-release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          generate_release_notes: true
+          files: |
+            Cloaker-x86_64.AppImage
+            Cloaker-macos.zip
+            Cloaker-windows.zip
