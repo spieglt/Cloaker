@@ -1,108 +1,106 @@
 use crate::os_interface::Ui;
-use sodiumoxide::crypto::pwhash;
-use sodiumoxide::crypto::secretstream::xchacha20poly1305::{Header, Key};
-use sodiumoxide::crypto::secretstream::{Stream, ABYTES, HEADERBYTES, KEYBYTES};
+use crate::{maybe_fill_buffer, percentage, CoreError};
+use dryoc::constants::{
+    CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_ABYTES as ABYTES,
+    CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_HEADERBYTES as HEADERBYTES,
+    CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_KEYBYTES as KEYBYTES,
+};
+use dryoc::dryocstream::{DryocStream, Header, Key, Pull, Tag};
+use std::error;
 use std::io::prelude::*;
-use std::{error, fmt};
+use zeroize::Zeroize;
 
 const CHUNKSIZE: usize = 4096;
 pub const SIGNATURE: [u8; 4] = [0xC1, 0x0A, 0x4B, 0xED];
 
-#[derive(Debug)]
-struct CoreError {
-    message: String,
-}
-
-impl CoreError {
-    fn new(msg: &str) -> Self {
-        CoreError {
-            message: msg.to_string(),
-        }
-    }
-}
-
-impl fmt::Display for CoreError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Error: {}", self.message)
-    }
-}
-
-impl error::Error for CoreError {}
+// Cloaker 1.x to 3.x derived the key with libsodium's crypto_pwhash_scryptsalsa208sha256 at the
+// "interactive" limits (opslimit 524288, memlimit 16777216). libsodium turns those limits into
+// scrypt parameters internally; for these particular constants it picks N = 2^14, r = 8, p = 1.
+// The compatibility tests check this against libsodium itself, so don't change them by hand.
+const SALTBYTES: usize = 32; // crypto_pwhash_scryptsalsa208sha256_SALTBYTES
+const LOG_N: u8 = 14;
+const R: u32 = 8;
+const P: u32 = 1;
 
 pub fn decrypt<I: Read, O: Write>(
     input: &mut I,
     output: &mut O,
     password: &str,
-    ui: &Box<dyn Ui>,
+    ui: &dyn Ui,
     filesize: Option<usize>,
     first_four: Option<[u8; 4]>,
 ) -> Result<(), Box<dyn error::Error>> {
-    // make sure file is at least prefix + salt + header
+    // make sure file is at least [prefix +] salt + header. cloaker 1.0 files have no prefix,
+    // in which case the first four bytes have already been read and are part of the salt.
     if let Some(size) = filesize {
-        if !(size >= pwhash::SALTBYTES + HEADERBYTES + SIGNATURE.len()) {
-            return Err(CoreError::new("File not big enough to have been encrypted"))?;
+        let prefix_len = if first_four.is_some() {
+            0
+        } else {
+            SIGNATURE.len()
+        };
+        if size < SALTBYTES + HEADERBYTES + prefix_len {
+            return Err(CoreError::new("File not big enough to have been encrypted").into());
         }
     }
     let mut total_bytes_read = 0;
 
-    let mut salt = [0u8; pwhash::SALTBYTES];
+    let mut salt = [0u8; SALTBYTES];
     match first_four {
         Some(four) => {
             // if signature was not present, and we're treating this as a cloaker 1.0 file because of the
             // .cloaker extension or because -d was used from CLI, then use those bytes for the salt.
-            &mut salt[..4].copy_from_slice(&four);
+            salt[..4].copy_from_slice(&four);
             input.read_exact(&mut salt[4..])?;
         }
         None => input.read_exact(&mut salt)?,
     };
-    let salt = pwhash::Salt(salt);
 
-    let mut header = [0u8; HEADERBYTES];
-    input.read_exact(&mut header)?;
-    let header = Header(header);
+    let mut header_bytes = [0u8; HEADERBYTES];
+    input.read_exact(&mut header_bytes)?;
+    let header = Header::from(header_bytes);
 
-    let mut key = [0u8; KEYBYTES];
-    pwhash::derive_key(
-        &mut key,
-        password.as_bytes(),
-        &salt,
-        pwhash::OPSLIMIT_INTERACTIVE,
-        pwhash::MEMLIMIT_INTERACTIVE,
-    )
-    .map_err(|_| CoreError::new("Deriving key failed"))?;
-    let key = Key(key);
+    let key = derive_key(password, &salt)?;
 
     let mut buffer = vec![0u8; CHUNKSIZE + ABYTES];
-    let mut stream =
-        Stream::init_pull(&header, &key).map_err(|_| CoreError::new("init_pull failed"))?;
-    while stream.is_not_finalized() {
+    let mut stream: DryocStream<Pull> = DryocStream::init_pull(&key, &header);
+    let mut chunks_read = 0;
+    loop {
         let (_eof, bytes_read) = maybe_fill_buffer(input, &mut buffer)?;
+        if bytes_read == 0 {
+            // ran out of input before the stream said it was finished
+            return Err(CoreError::new("File is truncated or corrupt").into());
+        }
         total_bytes_read += bytes_read;
-        let (decrypted, _tag) = stream
-            .pull(&buffer[..bytes_read], None)
-            .map_err(|_| CoreError::new("Incorrect password"))?;
+        let chunk: &[u8] = &buffer[..bytes_read];
+        let (decrypted, tag) = stream.pull_to_vec(&chunk, None).map_err(|_| {
+            if chunks_read == 0 {
+                CoreError::new("Incorrect password")
+            } else {
+                // an earlier chunk decrypted, so the password is right and the file is damaged
+                CoreError::new("File is truncated or corrupt")
+            }
+        })?;
+        chunks_read += 1;
         if let Some(size) = filesize {
-            let percentage = (((total_bytes_read as f32) / (size as f32)) * 100.) as i32;
-            ui.output(percentage);
+            ui.output(percentage(total_bytes_read, size));
         }
         output.write_all(&decrypted)?;
+        if tag == Tag::FINAL {
+            break;
+        }
     }
+    output.flush()?;
     ui.output(100);
     Ok(())
 }
 
-// returns Ok(true, bytes_read) if EOF, and Ok(false, bytes_read) if buffer was filled without EOF
-fn maybe_fill_buffer<T: Read>(
-    reader: &mut T,
-    buffer: &mut Vec<u8>,
-) -> std::io::Result<(bool, usize)> {
-    let mut bytes_read = 0;
-    while bytes_read < buffer.len() {
-        match reader.read(&mut buffer[bytes_read..]) {
-            Ok(x) if x == 0 => return Ok((true, bytes_read)), // EOF
-            Ok(x) => bytes_read += x,
-            Err(e) => return Err(e),
-        };
-    }
-    Ok((false, bytes_read))
+fn derive_key(password: &str, salt: &[u8; SALTBYTES]) -> Result<Key, CoreError> {
+    let params =
+        scrypt::Params::new(LOG_N, R, P).map_err(|_| CoreError::new("Deriving key failed"))?;
+    let mut key_bytes = [0u8; KEYBYTES];
+    scrypt::scrypt(password.as_bytes(), salt, &params, &mut key_bytes)
+        .map_err(|_| CoreError::new("Deriving key failed"))?;
+    let key = Key::from(key_bytes);
+    key_bytes.zeroize();
+    Ok(key)
 }

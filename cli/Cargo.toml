@@ -1,14 +1,10 @@
 [package]
 name = "cloaker_cli"
-version = "4.0.0"
+version = "5.0.0"
 authors = ["Theron Spiegl <tspiegl@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 cloaker = { path = "../core" }
 rpassword = "3.0.2"
 clap = "~2.33"
-
-[dev-dependencies]
-rand = "0.5"
-itertools = "0.9"
