@@ -12,16 +12,20 @@ Things the test suite cannot cover:
 - [x] **macOS** builds and works (confirmed by hand). Still unsigned — see gaps below.
 - [x] **Linux: drag and drop, and saving** work (confirmed by hand; the tests can't simulate a real
       drop).
-- [ ] **Linux: the rest of the GUI pass.** Drop a folder and several files at once, cancel the save
-      dialog, save over an existing file, Tab and Enter through the password prompt, and run a
-      multi-gigabyte file to watch the progress bar move and the window stay responsive.
-- [ ] **Cloaker.js interop.** Encrypt at cloaker.mobi and decrypt on the desktop, then the reverse.
-      The format is verified against libsodium in `core/tests/compatibility.rs`, but nothing has
-      exercised the browser implementation.
+- [x] **Linux: folder and multi-file drops** show the right messages, **Tab and Enter** work through
+      the password prompt, and the **progress bar** works (confirmed by hand).
+- [x] **Linux: the rest of the GUI pass.** Cancelling the save dialog works, saving over an
+      existing file gives the right warning, and the window stays responsive on large files
+      (confirmed by hand).
+- [x] **Cloaker.js interop** works (confirmed by hand).
 - [x] **Old-version file.** A file from an earlier Cloaker decrypts correctly (confirmed by hand).
-- [ ] **Security review of the diff**, particularly the KDF parameter translation in
-      `core/src/lib.rs` and `core/src/legacy.rs`.
-- [ ] Decide the password-minimum question still listed under "Planned features" in the README.
+- [x] **Security review of the diff** found no vulnerabilities. Two items below the bar were fixed
+      anyway: an output that is a hard link to the input is now refused (it used to destroy the
+      input), and the release workflow pins linuxdeploy with a checksum and every action by commit
+      SHA.
+- [ ] Decide the password question still listed under "Planned features" in the README. The
+      minimum length matters less than the cost of each guess — see
+      [Key derivation strength](#key-derivation-strength) below.
 
 ## Cutting it
 
@@ -48,6 +52,48 @@ Things the test suite cannot cover:
 - **File associations.** `gui/assets/cloaker.desktop` declares `Exec=cloaker %f`, so "Open with"
   works once installed on Linux. macOS and Windows would need their own registration.
 
+## Key derivation strength
+
+An open question, not a release blocker. The current format uses Argon2id with 64 MiB of memory
+and 2 passes: libsodium's INTERACTIVE level. Measured with the argon2 crate Cloaker uses, on a
+Ryzen 5 5600X:
+
+| libsodium level | Memory | Passes | One key derivation | Cost to an attacker |
+|---|---|---|---|---|
+| **INTERACTIVE (current)** | 64 MiB | 2 | **76 ms** | 1× |
+| MODERATE | 256 MiB | 3 | 422 ms | ~5.6× |
+| SENSITIVE | 1 GiB | 4 | 2.3 s | ~30× |
+
+**Adequate, but on the light side for file encryption.**
+
+- It is above OWASP's Argon2id minimums (for example 19 MiB with 2 passes, or 46 MiB with 1).
+- libsodium means INTERACTIVE for online logins, where a server derives a key on every request,
+  and points to SENSITIVE for "highly sensitive data and non-interactive operations". File
+  encryption is the non-interactive case: one derivation per file, and anyone holding the file
+  can guess offline for as long as they like.
+- RFC 9106's fallback for memory-constrained environments is 64 MiB with 3 passes; Cloaker is
+  slightly below it.
+- At 76 ms nobody would notice going several times higher, and the multiplier applies directly to
+  an attacker's time. It won't save a bad password, but it raises the bar for mediocre ones.
+- The minimum password length matters less by comparison: 12 random characters are already out of
+  reach, and people meet a longer minimum by padding familiar patterns.
+
+**What's in the way.**
+
+1. The parameters are not stored in the file, so changing them needs a new file format. New
+   versions can keep reading today's format, but older ones can't read the new one — and Cloaker 4
+   would misreport it: an unknown signature falls through to its legacy path, so it tells the user
+   their password is wrong. Cloaker.js would have to change at the same time.
+2. Cloaker.js caps how high this can go. 1 GiB is likely too much for browser WebAssembly on
+   phones, and a 30× slowdown there could run to many seconds. 256 MiB is a far safer bet, but
+   nobody has measured Cloaker.js yet — check it on a phone before choosing a level.
+
+**Recommendation.** Move to MODERATE (256 MiB, 3 passes) in a new file format that records its
+parameters, so they can be raised later without another break. The reader must cap the stored
+values so a crafted file can't make it allocate an absurd amount of memory. The open decision is
+timing: in 5.0, which is already the major release but means Cloaker 4 can't open the new files,
+or in a later release, which keeps 5.0 fully compatible with 4.
+
 ## What is already verified
 
 - 41 tests: 24 in `core` (including committed fixtures produced by libsodium before the crypto
@@ -58,7 +104,14 @@ Things the test suite cannot cover:
 - The AppImage has been built with linuxdeploy on this machine and launches, both headless
   (`--version`) and with a file argument.
 - Built and run by hand on Windows and macOS; on Linux, drag and drop and saving confirmed.
-- A fresh clone of the branch passes all 41 tests, fixtures included.
+- A fresh clone of the branch passes all 43 tests, fixtures included.
+- CI passed on ubuntu-latest, macos-latest and windows-latest (run 35304834017).
+- The CLI was exercised end to end against the release build: round trips including an empty file
+  and a 3 MB one, wrong password and tampered data rejected with no output left behind, truncation
+  after an authenticated chunk reported as truncation, `-o <directory>`, refusing an existing
+  output file, refusing an output that is the input or a hard link to it, password files with a
+  trailing newline, stdin/stdout piping, the short-password rule, all three committed fixtures, and
+  round trips both ways against a CLI built from `master`.
 
 ## Release notes draft
 
