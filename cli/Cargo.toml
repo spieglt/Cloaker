@@ -6,5 +6,5 @@ edition = "2021"
 
 [dependencies]
 cloaker = { path = "../core" }
-rpassword = "3.0.2"
+rpassword = "7.5.4"
 clap = "~2.33"

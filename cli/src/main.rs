@@ -219,18 +219,18 @@ fn strip_trailing_newline(contents: &str) -> &str {
 fn get_password(mode: &Mode) -> Result<String, Box<dyn Error>> {
     match mode {
         Mode::Encrypt => {
-            let password = rpassword::prompt_password_stdout(&format!(
+            let password = rpassword::prompt_password(format!(
                 "Password (minimum {} characters, longer is better): ",
                 MIN_PASSWORD_LENGTH
             ))?;
             check_password_length(&password)?;
-            let verified_password = rpassword::prompt_password_stdout("Confirm password: ")?;
+            let verified_password = rpassword::prompt_password("Confirm password: ")?;
             if password != verified_password {
                 return Err("Error: passwords do not match.".into());
             }
             Ok(password)
         }
-        Mode::Decrypt => Ok(rpassword::prompt_password_stdout("Password: ")?),
+        Mode::Decrypt => Ok(rpassword::prompt_password("Password: ")?),
     }
 }
 

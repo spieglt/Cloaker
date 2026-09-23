@@ -25,6 +25,11 @@ Things the test suite cannot cover:
       anyway: an output that is a hard link to the input is now refused (it used to destroy the
       input), and the release workflow pins linuxdeploy with a checksum and every action by commit
       SHA.
+- [x] **The CLI's interactive password prompt** still prompts, and still hides what is typed, on
+      rpassword 7 (confirmed by hand). The prompt now goes to the terminal device rather than
+      stdout, which keeps it out of `-E`'s output stream.
+- [ ] **CI on the current commits.** The Windows resource step in `gui/build.rs` has only been
+      built on this machine; run 35304834017 predates it.
 - [ ] Decide the password question still listed under "Planned features" in the README. See
       [Key derivation strength](#key-derivation-strength) below: at the current settings the
       password itself decides whether a file can be broken, and neither a longer minimum nor
@@ -128,15 +133,16 @@ words" to make the target concrete.
 
 ## What is already verified
 
-- 41 tests: 24 in `core` (including committed fixtures produced by libsodium before the crypto
+- 42 tests: 25 in `core` (including committed fixtures produced by libsodium before the crypto
   migration, and both interop directions), 2 in `cli`, 15 in `gui` (headless UI tests via
-  `egui_kittest`). `cargo clippy --all-targets -- -D warnings` and `cargo fmt --check` are clean.
+  `egui_kittest`). A 43rd, which rewrites the fixtures, is `#[ignore]`d. `cargo clippy
+  --all-targets -- -D warnings` and `cargo fmt --check` are clean.
 - A CLI built from the pre-rewrite commit and the current one encrypt and decrypt each other's
   files in both directions.
 - The AppImage has been built with linuxdeploy on this machine and launches, both headless
   (`--version`) and with a file argument.
 - Built and run by hand on Windows and macOS; on Linux, drag and drop and saving confirmed.
-- A fresh clone of the branch passes all 43 tests, fixtures included.
+- A fresh clone of the branch passes all 42 tests, fixtures included.
 - CI passed on ubuntu-latest, macos-latest and windows-latest (run 35304834017).
 - The CLI was exercised end to end against the release build: round trips including an empty file
   and a 3 MB one, wrong password and tampered data rejected with no output left behind, truncation
