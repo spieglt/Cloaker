@@ -32,8 +32,8 @@ Things the test suite cannot cover:
 
 ## Cutting it
 
-1. Versions are already 5.0.0 in `core/`, `cli/` and `gui/` `Cargo.toml`, the CLI's `--version`,
-   the About box and `gui/assets/Info.plist`.
+1. Versions are already 5.0.0 in `core/`, `cli/` and `gui/` `Cargo.toml` and in
+   `gui/assets/Info.plist`. `--version` and the About box follow `Cargo.toml`.
 2. Commit, then `git tag v5.0.0 && git push --tags`.
 3. `.github/workflows/release.yml` builds all three platforms, smoke-tests each binary, and opens a
    **draft** release with the artifacts attached.

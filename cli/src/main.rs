@@ -48,9 +48,8 @@ fn main() {
 
 fn do_it() -> Result<(Option<String>, Mode), Box<dyn Error>> {
     let matches = App::new("Cloaker")
-        .version("v5.0")
-        .author("Theron Spiegl")
-        .about("Cloaker is a simple file encryption utility. Passwords must be at least 12 characters, though longer is better. Written in Rust using sodiumoxide/libsodium's secretstream encryption. Copyright © 2026 Theron Spiegl. All rights reserved. https://cloaker.spiegl.dev/")
+        .version(env!("CARGO_PKG_VERSION"))
+        .about("Cloaker is a simple file encryption utility. Passwords must be at least 12 characters, though longer is better. Written in pure Rust, using libsodium's XChaCha20-Poly1305 secretstream format. Copyright © 2026 Theron Spiegl. All rights reserved. https://cloaker.spiegl.dev/")
         .arg(Arg::with_name("encrypt")
             .short("e")
             .long("encrypt")

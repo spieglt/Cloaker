@@ -515,7 +515,7 @@ impl CloakerApp {
         }
         let response = egui::Modal::new(egui::Id::new("about_modal")).show(ctx, |ui| {
             ui.set_max_width(360.0);
-            ui.heading("Cloaker v5.0");
+            ui.heading(concat!("Cloaker ", env!("CARGO_PKG_VERSION")));
             ui.add_space(4.0);
             ui.label("Copyright © 2026 Theron Spiegl");
             ui.label("Licensed under the GNU General Public License v3.0");
