@@ -63,14 +63,10 @@ integration pick them up without any of this.
 **Mac:** assemble the bundle from `gui/assets/Info.plist` and `gui/assets/macCloakerLogo.icns` —
 see the macOS step in `.github/workflows/release.yml`, which does it in a few lines of `cp`.
 
-**Windows:** the `.exe` is already a single self-contained file. To give it the Cloaker icon, add a
-build script using [winresource](https://github.com/BenjaminRi/winresource) pointing at
-`gui/assets/cloaker.ico`.
+**Windows:** the `.exe` is already a single self-contained file, and `gui/build.rs` gives it the
+Cloaker icon and version info.
 
 Release checklist and known gaps: [RELEASE.md](RELEASE.md).
-
-# Planned features:
-- Change minimum password length to 14 or 16?
 
 # Issues:
 - Please tell me about them.

@@ -30,10 +30,6 @@ Things the test suite cannot cover:
       stdout, which keeps it out of `-E`'s output stream.
 - [ ] **CI on the current commits.** The Windows resource step in `gui/build.rs` has only been
       built on this machine; run 35304834017 predates it.
-- [ ] Decide the password question still listed under "Planned features" in the README. See
-      [Key derivation strength](#key-derivation-strength) below: at the current settings the
-      password itself decides whether a file can be broken, and neither a longer minimum nor
-      costlier settings changes that much.
 
 ## Cutting it
 
@@ -57,79 +53,6 @@ Things the test suite cannot cover:
   older distribution than the one it was built on.
 - **File associations.** `gui/assets/cloaker.desktop` declares `Exec=cloaker %f`, so "Open with"
   works once installed on Linux. macOS and Windows would need their own registration.
-
-## Key derivation strength
-
-An open question, not a release blocker. The current format uses Argon2id with 64 MiB of memory
-and 2 passes: libsodium's INTERACTIVE level.
-
-**Can anything break it?** No known technology breaks the cryptography. There is no cryptanalytic
-attack on Argon2id (the Password Hashing Competition winner, RFC 9106), and XChaCha20-Poly1305's
-256-bit key can't be brute-forced by any physical means. The only way in is guessing the password,
-and every guess costs a full key derivation. So whether a file falls depends on its password, not
-on these settings.
-
-To bound the biggest attacker: each guess moves roughly 256–384 MiB through memory, and memory
-bandwidth is the bottleneck. A top GPU has about 1–3 TB/s, so it manages on the order of 10³–10⁴
-guesses a second. An attacker far beyond any real cracking operation — a million top GPUs, about
-the size of the largest GPU clusters in existence, all working on one file — gets about 10¹⁰
-guesses a second. These are order-of-magnitude estimates from that bandwidth arithmetic, not
-measured attack rates. Time for that attacker to try every possible password:
-
-| Password | Possibilities | Time |
-|---|---|---|
-| Typical human-chosen, 12 characters | cracking dictionaries plus mangling rules find most within ~10⁹–10¹² guesses | **seconds to minutes** |
-| 4 random words (diceware) | 3.7 × 10¹⁵ | **~4 days** |
-| 5 random words | 2.8 × 10¹⁹ | ~90 years |
-| 6 random words | 2.2 × 10²³ | ~700,000 years |
-| 12 random characters | 4.8 × 10²³ | ~1.5 million years |
-
-On average an attacker finds the password halfway through. Two things that don't change the
-answer:
-
-- **Custom chips (ASICs).** Argon2 is memory-hard, so they hit the same memory limits as GPUs.
-  They might gain around 10×, which moves every row by less than an order of magnitude.
-- **Quantum computers.** Grover's algorithm offers at most a quadratic speedup, and would need
-  Argon2 running as a quantum circuit with 64 MiB of coherent quantum memory, orders of magnitude
-  beyond any existing machine. Against the 256-bit cipher key it still leaves 128-bit security.
-
-So a strong password (12 truly random characters, or five or more random words) is safe at these
-settings against any known attacker, nation states included, and a weak password isn't safe at any
-setting.
-
-**Raising the settings.** Measured with the argon2 crate Cloaker uses, on a Ryzen 5 5600X:
-
-| libsodium level | Memory | Passes | One key derivation | Cost to an attacker |
-|---|---|---|---|---|
-| **INTERACTIVE (current)** | 64 MiB | 2 | **76 ms** | 1× |
-| MODERATE | 256 MiB | 3 | 422 ms | ~5.6× |
-| SENSITIVE | 1 GiB | 4 | 2.3 s | ~30× |
-
-By the standards' own wording the current level is on the light side for file encryption:
-libsodium intends INTERACTIVE for online logins and points to SENSITIVE for "highly sensitive data
-and non-interactive operations", and RFC 9106's fallback for memory-constrained environments is
-64 MiB with 3 passes. But a higher level only multiplies the times in the first table, and the one
-row where that changes the outcome is four random words against the extreme attacker, which goes
-from days to weeks or months. It is a marginal improvement, not an urgent one. A longer minimum
-password length helps even less: 12 random characters are already out of reach, and people meet a
-longer minimum by padding familiar patterns.
-
-**What's in the way of raising them.**
-
-1. The parameters are not stored in the file, so changing them needs a new file format. New
-   versions can keep reading today's format, but older ones can't read the new one — and Cloaker 4
-   would misreport it: an unknown signature falls through to its legacy path, so it tells the user
-   their password is wrong. Cloaker.js would have to change at the same time.
-2. Cloaker.js caps how high this can go. 1 GiB is likely too much for browser WebAssembly on
-   phones, and a 30× slowdown there could run to many seconds. 256 MiB is a far safer bet, but
-   nobody has measured Cloaker.js yet.
-
-**Recommendation.** Ship 5.0 at INTERACTIVE, keeping full compatibility with Cloaker 4 and
-Cloaker.js. Treat stronger settings as future work: a new file format that records its parameters
-(with the reader capping the stored values, so a crafted file can't make it allocate an absurd
-amount of memory), probably at MODERATE, after measuring Cloaker.js on a phone. Encouraging
-passphrases buys more than either. The GUI's hint already does; it could name "five or more random
-words" to make the target concrete.
 
 ## What is already verified
 
