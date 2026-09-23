@@ -1,15 +1,13 @@
-mod brute_force; // test
+#[cfg(test)]
+mod brute_force;
 
 use cloaker::*;
 
 use clap::{App, Arg, ArgGroup};
-use rpassword;
-use std::env;
 use std::error::Error;
-use std::path::{Path, PathBuf};
+use std::io::Write;
+use std::path::Path;
 use std::process::exit;
-
-const FILE_EXTENSION: &str = ".cloaker";
 
 struct ProgressUpdater {
     mode: Mode,
@@ -24,6 +22,8 @@ impl Ui for ProgressUpdater {
                 Mode::Decrypt => "Decrypting",
             };
             print!("\r{}: {}%", s, percentage);
+            // progress has no trailing newline, so it needs flushing to be visible
+            let _ = std::io::stdout().flush();
         }
     }
 }
@@ -39,15 +39,17 @@ fn main() {
                 println!("\nSuccess! {} has been {}.", name, m);
             }
         }
-        Err(e) => eprintln!("\n{}", e),
+        Err(e) => {
+            eprintln!("\n{}", e);
+            exit(1);
+        }
     };
 }
 
 fn do_it() -> Result<(Option<String>, Mode), Box<dyn Error>> {
     let matches = App::new("Cloaker")
-        .version("v4.0")
-        .author("Theron Spiegl")
-        .about("Cloaker is a simple file encryption utility. Passwords must be at least 12 characters, though longer is better. Written in Rust using sodiumoxide/libsodium's secretstream encryption. Copyright © 2021 Theron Spiegl. All rights reserved. https://cloaker.spiegl.dev/")
+        .version(env!("CARGO_PKG_VERSION"))
+        .about("Cloaker is a simple file encryption utility. Passwords must be at least 12 characters, though longer is better. Written in pure Rust, using libsodium's XChaCha20-Poly1305 secretstream format. Copyright © 2026 Theron Spiegl. All rights reserved. https://cloaker.spiegl.dev/")
         .arg(Arg::with_name("encrypt")
             .short("e")
             .long("encrypt")
@@ -96,7 +98,7 @@ fn do_it() -> Result<(Option<String>, Mode), Box<dyn Error>> {
             .short("f")
             .long("password-file")
             .value_name("PASSWORD_FILE")
-            .help("The password to encrypt/decrypt with will be read from a text file at the path provided. File should be valid UTF-8 and contain only the password with no newline. This or the --password (-p) flag is required if using stdin and/or stdout.")
+            .help("The password to encrypt/decrypt with will be read from a text file at the path provided. File should be valid UTF-8 and contain only the password. A single trailing newline, if present, is ignored. This or the --password (-p) flag is required if using stdin and/or stdout.")
             .takes_value(true))
         .group(ArgGroup::with_name("password_flags")
             .args(&["password", "password_file"]))
@@ -108,29 +110,15 @@ fn do_it() -> Result<(Option<String>, Mode), Box<dyn Error>> {
         Mode::Decrypt
     };
 
-    let filename = if matches.is_present("encrypt") {
-        let f = matches
-            .value_of("encrypt")
-            .ok_or("file to encrypt not given")?;
-        // make sure input file exists
-        let p = Path::new(f);
-        if !(p.exists() && p.is_file()) {
-            println!("Invalid filename: {}", f);
-            exit(1);
+    let filename = match (matches.value_of("encrypt"), matches.value_of("decrypt")) {
+        (Some(f), _) | (_, Some(f)) => {
+            // make sure input file exists
+            if !Path::new(f).is_file() {
+                return Err(format!("Invalid filename: {}", f).into());
+            }
+            Some(f)
         }
-        Some(f)
-    } else if matches.is_present("decrypt") {
-        let f = matches
-            .value_of("decrypt")
-            .ok_or("file to decrypt not given")?;
-        let p = Path::new(f);
-        if !(p.exists() && p.is_file()) {
-            println!("Invalid filename: {}", f);
-            exit(1);
-        }
-        Some(f)
-    } else {
-        None // using stdin
+        _ => None, // using stdin
     };
 
     let output_path = if !matches.is_present("stdout") {
@@ -145,151 +133,118 @@ fn do_it() -> Result<(Option<String>, Mode), Box<dyn Error>> {
 
     // get_password needs to only happen if using neither stdin nor stdout: using requires() in clap
     // password prompting is affected by both stdin and stdout, whereas other printing is affected only by stdout
-    let password = if matches.is_present("password") {
-        matches
-            .value_of("password")
-            .ok_or("couldn't get password value")?
-            .to_string()
-    } else if matches.is_present("password_file") {
-        let pw_file = matches
-            .value_of("password_file")
-            .ok_or("could not get value of password file")?
-            .to_string();
-        let p = Path::new(&pw_file);
-        std::fs::read_to_string(p)
-            .map_err(|e| format!("could not read password file: {}", e.to_string()))?
+    let mut unstripped_password = None;
+    let password = if let Some(p) = matches.value_of("password") {
+        p.to_string()
+    } else if let Some(pw_file) = matches.value_of("password_file") {
+        let contents = std::fs::read_to_string(Path::new(pw_file))
+            .map_err(|e| format!("could not read password file: {}", e))?;
+        let stripped = strip_trailing_newline(&contents);
+        if stripped != contents {
+            // earlier versions used the file verbatim, newline included, so keep it as a fallback
+            unstripped_password = Some(contents.clone());
+        }
+        stripped.to_string()
     } else {
-        get_password(&mode)
+        get_password(&mode)?
     };
+    // the minimum length applies no matter where the password came from
+    if let Mode::Encrypt = mode {
+        check_password_length(&password)?;
+    }
+
+    let to_stdout = matches.is_present("stdout");
+    let result = run(
+        &mode,
+        &password,
+        filename,
+        output_path.as_deref(),
+        to_stdout,
+    );
+    match result {
+        Ok(()) => Ok((output_path, mode)),
+        Err(e) => {
+            // a file encrypted by an older version may have included the password file's trailing
+            // newline in the password. retry with it, but only when both ends are real files:
+            // stdin can't be read twice, and stdout may already have been written to.
+            let retryable = matches!(mode, Mode::Decrypt) && filename.is_some() && !to_stdout;
+            if let (true, Some(unstripped)) = (retryable, &unstripped_password) {
+                if run(
+                    &mode,
+                    unstripped,
+                    filename,
+                    output_path.as_deref(),
+                    to_stdout,
+                )
+                .is_ok()
+                {
+                    return Ok((output_path, mode));
+                }
+            }
+            Err(e)
+        }
+    }
+}
+
+fn run(
+    mode: &Mode,
+    password: &str,
+    filename: Option<&str>,
+    output_path: Option<&str>,
+    to_stdout: bool,
+) -> Result<(), Box<dyn Error>> {
     let ui = Box::new(ProgressUpdater {
         mode: mode.clone(),
-        stdout: matches.is_present("stdout"),
+        stdout: to_stdout,
     });
     let config = Config::new(
-        &mode,
-        password,
+        mode,
+        password.to_string(),
         filename.map(|f| f.to_string()),
-        output_path.clone(),
+        output_path.map(|o| o.to_string()),
         ui,
     );
-    match main_routine(&config) {
-        Ok(()) => Ok((output_path, mode)),
-        Err(e) => Err(e),
-    }
+    main_routine(&config)
 }
 
-fn get_password(mode: &Mode) -> String {
+// a password file written with `echo hunter2... > pw.txt` ends in a newline that the user
+// doesn't consider part of their password, so ignore one trailing line ending
+fn strip_trailing_newline(contents: &str) -> &str {
+    contents
+        .strip_suffix('\n')
+        .map(|s| s.strip_suffix('\r').unwrap_or(s))
+        .unwrap_or(contents)
+}
+
+fn get_password(mode: &Mode) -> Result<String, Box<dyn Error>> {
     match mode {
         Mode::Encrypt => {
-            let password = rpassword::prompt_password_stdout(
-                "Password (minimum 12 characters, longer is better): ",
-            )
-            .expect("could not get password from user");
-            if password.len() < 12 {
-                println!("Error: password must be at least 12 characters. Exiting.");
-                exit(12);
-            }
-            let verified_password = rpassword::prompt_password_stdout("Confirm password: ")
-                .expect("could not get password from user");
+            let password = rpassword::prompt_password(format!(
+                "Password (minimum {} characters, longer is better): ",
+                MIN_PASSWORD_LENGTH
+            ))?;
+            check_password_length(&password)?;
+            let verified_password = rpassword::prompt_password("Confirm password: ")?;
             if password != verified_password {
-                println!("Error: passwords do not match. Exiting.");
-                exit(1);
+                return Err("Error: passwords do not match.".into());
             }
-            password
+            Ok(password)
         }
-        Mode::Decrypt => rpassword::prompt_password_stdout("Password: ")
-            .expect("could not get password from user"),
+        Mode::Decrypt => Ok(rpassword::prompt_password("Password: ")?),
     }
 }
 
-fn generate_output_path(
-    mode: &Mode,
-    input: Option<&str>,
-    output: Option<&str>,
-) -> Result<PathBuf, String> {
-    if output.is_some() {
-        // if output flag was specified,
-        let p = PathBuf::from(output.unwrap());
-        if p.exists() && p.is_dir() {
-            // and it's a directory,
-            generate_default_filename(mode, p, input) // give it a default filename.
-        } else if p.exists() && p.is_file() {
-            Err(format!("Error: file {:?} already exists. Must choose new filename or specify directory to generate default filename.", p))
-        } else {
-            // otherwise use it as the output filename.
-            Ok(p)
-        }
-    } else {
-        // if output not specified, generate default filename and put in the current working directory
-        let cwd = env::current_dir().map_err(|e| e.to_string())?;
-        generate_default_filename(mode, cwd, input)
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn strips_one_trailing_line_ending() {
+        assert_eq!(strip_trailing_newline("password"), "password");
+        assert_eq!(strip_trailing_newline("password\n"), "password");
+        assert_eq!(strip_trailing_newline("password\r\n"), "password");
+        assert_eq!(strip_trailing_newline("password\n\n"), "password\n");
+        // whitespace other than the final line ending belongs to the password
+        assert_eq!(strip_trailing_newline(" pass word \n"), " pass word ");
     }
-}
-
-fn generate_default_filename(
-    mode: &Mode,
-    _path: PathBuf,
-    name: Option<&str>,
-) -> Result<PathBuf, String> {
-    let mut path = _path;
-    let f = match mode {
-        Mode::Encrypt => {
-            let mut with_ext = if let Some(n) = name {
-                n.to_string()
-            } else {
-                "encrypted".to_string()
-            };
-            with_ext.push_str(FILE_EXTENSION);
-            with_ext
-        }
-        Mode::Decrypt => {
-            let name = if let Some(n) = name { n } else { "stdin" };
-            if name.ends_with(FILE_EXTENSION) {
-                name[..name.len() - FILE_EXTENSION.len()].to_string()
-            } else {
-                prepend("decrypted_", name)
-                    .ok_or(format!("could not prepend decrypted_ to filename {}", name))?
-            }
-        }
-    };
-    path.push(f);
-    find_filename(path).ok_or("could not generate filename".to_string())
-}
-
-fn find_filename(_path: PathBuf) -> Option<PathBuf> {
-    let mut i = 1;
-    let mut path = _path;
-    let backup_path = path.clone();
-    while path.exists() {
-        path = backup_path.clone();
-        let stem = match path.file_stem() {
-            Some(s) => s.to_string_lossy().to_string(),
-            None => "".to_string(),
-        };
-        let ext = match path.extension() {
-            Some(s) => s.to_string_lossy().to_string(),
-            None => "".to_string(),
-        };
-        let parent = path.parent()?;
-        let new_file = match ext.as_str() {
-            "" => format!("{} ({})", stem, i),
-            _ => format!("{} ({}).{}", stem, i, ext),
-        };
-        path = [parent, Path::new(&new_file)].iter().collect();
-        i += 1;
-    }
-    Some(path)
-}
-
-fn prepend(prefix: &str, p: &str) -> Option<String> {
-    let mut path = PathBuf::from(p);
-    let file = path.file_name()?;
-    let parent = path.parent()?;
-    path = [
-        parent,
-        Path::new(&format!("{}{}", prefix, file.to_string_lossy())),
-    ]
-    .iter()
-    .collect();
-    Some(path.to_string_lossy().to_string())
 }
