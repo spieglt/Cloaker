@@ -20,3 +20,6 @@ strip = true
 
 [dev-dependencies]
 egui_kittest = "0.36"
+
+[build-dependencies]
+winresource = "0.1.31"

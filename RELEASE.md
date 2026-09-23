@@ -8,7 +8,9 @@ unaffected. That is the claim to be most careful about before publishing.
 
 Things the test suite cannot cover:
 
-- [x] **Windows** builds and works (confirmed by hand). The exe still has no icon — see gaps below.
+- [x] **Windows** builds and works (confirmed by hand). `gui/build.rs` now embeds the exe icon and
+      version info with [winresource](https://github.com/BenjaminRi/winresource); the icon
+      extracts at 16 to 256 px from a local release build.
 - [x] **macOS** builds and works (confirmed by hand). Still unsigned — see gaps below.
 - [x] **Linux: drag and drop, and saving** work (confirmed by hand; the tests can't simulate a real
       drop).
@@ -40,8 +42,6 @@ Things the test suite cannot cover:
 
 ## Known gaps
 
-- **Windows icon.** The exe ships without one; wiring it needs a `build.rs` using
-  [winresource](https://github.com/BenjaminRi/winresource) pointing at `gui/assets/cloaker.ico`.
 - **Windows console output.** As a GUI-subsystem binary, `--help` and `--version` write to a console
   that isn't attached, so the text is dropped (the exit code is still 0). Harmless, but it means
   `cloaker --help` from cmd.exe prints nothing.
