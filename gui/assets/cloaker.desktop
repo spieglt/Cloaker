@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Cloaker
+GenericName=File Encryption
+Comment=Encrypt and decrypt files with a password
+Exec=cloaker %f
+Icon=cloaker
+Terminal=false
+Categories=Utility;Security;
+MimeType=application/octet-stream;
+Keywords=encryption;password;security;

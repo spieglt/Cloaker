@@ -1,95 +1,120 @@
-#[cfg(test)]
-mod tests {
-    use itertools::Itertools;
-    use rand::{thread_rng, RngCore};
-    use std::io::Write;
-    use std::time::Instant;
+//! A bounded version of the brute-force experiment: it encrypts a file, makes a handful of
+//! wrong-password attempts against it, asserts that every attempt fails and leaves no output
+//! behind, and prints how long an exhaustive search would take at the measured rate.
 
-    struct ProgressUpdater {}
+use std::fs::{create_dir_all, remove_dir_all, File};
+use std::io::Write;
+use std::path::PathBuf;
+use std::time::Instant;
 
-    impl cloaker::Ui for ProgressUpdater {
-        fn output(&self, _percentage: i32) {}
+// letters, numbers, and symbols make 94 values
+const ALPHABET: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+`~,./<>?;':\"[]{}\\|";
+const ATTEMPTS: u32 = 5;
+
+struct ProgressUpdater {}
+
+impl cloaker::Ui for ProgressUpdater {
+    fn output(&self, _percentage: i32) {}
+}
+
+// a scratch directory that cleans up after itself
+struct TempDir {
+    path: PathBuf,
+}
+
+impl TempDir {
+    fn new(name: &str) -> Self {
+        let path = std::env::temp_dir().join(format!("cloaker-{}-{}", name, std::process::id()));
+        let _ = remove_dir_all(&path);
+        create_dir_all(&path).expect("could not create temp directory");
+        TempDir { path }
     }
 
-    #[test]
-    fn brute_force_test() -> Result<(), Box<dyn std::error::Error>> {
-        // generate random file, write to temp location
-        let mut random_data = vec![0; (1 << 10) * 100]; // 100KiB
-        thread_rng().fill_bytes(&mut random_data);
-        let mut temp_file = std::env::temp_dir();
-        temp_file.push("rand.txt");
-        let mut file = std::fs::File::create(&temp_file)?;
-        file.write_all(&random_data)?;
+    fn file(&self, name: &str) -> String {
+        self.path.join(name).to_string_lossy().to_string()
+    }
+}
 
-        // encrypt file with 12-char password
-        let pw = "abcdefghijkl".to_string();
-        let in_file = temp_file.to_str().unwrap().to_string();
-        let mut out_path = std::env::temp_dir();
-        out_path.push("encrypted.txt");
-        let out_file = out_path.to_str().unwrap().to_string();
-        let config = cloaker::Config::new(
-            &cloaker::Mode::Encrypt,
-            pw,
-            Some(in_file),
-            Some(out_file.clone()),
+impl Drop for TempDir {
+    fn drop(&mut self) {
+        let _ = remove_dir_all(&self.path);
+    }
+}
+
+// deterministic stand-in for random data, so a failure is always reproducible
+fn pseudorandom(len: usize, seed: u64) -> Vec<u8> {
+    let mut state = seed | 1;
+    (0..len)
+        .map(|_| {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            (state >> 24) as u8
+        })
+        .collect()
+}
+
+// the nth password of ALPHABET, counting in base 94
+fn nth_guess(mut n: u64, length: usize) -> String {
+    let base = ALPHABET.len() as u64;
+    let mut chars = Vec::with_capacity(length);
+    for _ in 0..length {
+        chars.push(ALPHABET[(n % base) as usize]);
+        n /= base;
+    }
+    String::from_utf8(chars).expect("alphabet is ascii")
+}
+
+#[test]
+fn wrong_passwords_are_rejected_at_an_infeasible_rate() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = TempDir::new("brute-force");
+
+    // generate a file and encrypt it with a 12-character password
+    let in_file = dir.file("rand.bin");
+    File::create(&in_file)?.write_all(&pseudorandom((1 << 10) * 100, 0x5c10a6bed))?; // 100KiB
+    let encrypted = dir.file("encrypted.cloaker");
+    let config = cloaker::Config::new(
+        &cloaker::Mode::Encrypt,
+        "abcdefghijkl".to_string(),
+        Some(in_file),
+        Some(encrypted.clone()),
+        Box::new(ProgressUpdater {}),
+    );
+    cloaker::main_routine(&config)?;
+
+    // measure how many guesses per second an attacker with this machine would get
+    let guessed = dir.file("guessed");
+    let start_time = Instant::now();
+    for attempt in 0..ATTEMPTS {
+        let guess = nth_guess(attempt as u64, 12);
+        let c = cloaker::Config::new(
+            &cloaker::Mode::Decrypt,
+            guess.clone(),
+            Some(encrypted.clone()),
+            Some(guessed.clone()),
             Box::new(ProgressUpdater {}),
         );
-        cloaker::main_routine(&config)?;
-
-        // measure frequency of brute-force attempts
-        /*
-            Letters, numbers, and symbols makes 94 values. With a 12 character minimum, that makes 1,951,641,934,005,400 passwords.
-
-        */
-
-        let mut possible_chars = ('a'..='z').collect::<Vec<char>>();
-        possible_chars.append(&mut ('A'..='Z').collect());
-        possible_chars.append(
-            &mut "0123456789!@#$%^&*()-_=+`~,./<>?;':\"[]{}\\|"
-                .chars()
-                .collect(),
+        assert!(
+            cloaker::main_routine(&c).is_err(),
+            "guess {} should not have decrypted the file",
+            guess
         );
-        let mut combiner = possible_chars.iter().combinations_with_replacement(10);
-        println!("possible chars: {}", possible_chars.len());
-
-        let num_combos = 1951641934005400.;
-        let start_time = Instant::now();
-        let mut attempts = 0;
-
-        loop {
-            let guess_chars = combiner
-                .next() // get next combination from the iterator, which will be a Vec<&char>
-                .ok_or("end of combinations")? // coerce None to Err so we can fit the surrounding function signature and use the question mark
-                .iter() // have to iterate over it so we can...
-                .cloned()
-                .cloned() // clone it twice, which is weird. we're dealing with references to references at this point I guess so have to undo it twice.
-                .collect::<Vec<char>>(); // and then collect it into a vector of chars.
-            let guess: String = guess_chars.into_iter().collect();
-            let c = cloaker::Config::new(
-                &cloaker::Mode::Decrypt,
-                guess.clone(),
-                Some(out_file.clone()),
-                Some("./result".to_string()),
-                Box::new(ProgressUpdater {}),
-            );
-            assert!(cloaker::main_routine(&c).is_err());
-
-            attempts += 1;
-            let elapsed = Instant::now()
-                .duration_since(start_time.clone())
-                .as_secs_f64();
-            if elapsed == 0. {
-                continue;
-            };
-            let attempts_per_sec = attempts as f64 / elapsed;
-            // attempts_per_sec * num_secs = num_combos, so num_secs = num_combos / attempts_per_sec
-            let num_secs = num_combos / attempts_per_sec;
-            let num_years = num_secs / (60. * 60. * 24. * 365.);
-            if attempts % 100 == 0 {
-                println!("guess: {}", guess);
-                println!("at {:.3} attempts per second, it would take {:.2} years to test all 12-character passwords including lower-/uppercase letters, numbers, and symbols.", attempts_per_sec, num_years);
-            }
-        }
-        Ok(())
+        assert!(
+            !PathBuf::from(&guessed).exists(),
+            "failed attempt left an output file behind"
+        );
     }
+    let elapsed = start_time.elapsed().as_secs_f64();
+
+    // 94 possible characters and a 12 character minimum
+    let num_combos = (ALPHABET.len() as f64).powi(12);
+    let attempts_per_sec = ATTEMPTS as f64 / elapsed.max(f64::EPSILON);
+    let num_years = num_combos / attempts_per_sec / (60. * 60. * 24. * 365.);
+    println!(
+        "at {:.3} attempts per second, it would take {:.2e} years to test all {}-character \
+         passwords including lower-/uppercase letters, numbers, and symbols.",
+        attempts_per_sec, num_years, 12
+    );
+
+    Ok(())
 }
