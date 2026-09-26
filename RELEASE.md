@@ -36,8 +36,18 @@ Things the test suite cannot cover:
 1. Versions are already 5.0.0 in `core/`, `cli/` and `gui/` `Cargo.toml` and in
    `gui/assets/Info.plist`. `--version` and the About box follow `Cargo.toml`.
 2. Commit, then `git tag v5.0.0 && git push --tags`.
-3. `.github/workflows/release.yml` builds all three platforms, smoke-tests each binary, and opens a
-   **draft** release with the artifacts attached.
+3. `.github/workflows/release.yml` builds all three platforms, smoke-tests every binary, and opens
+   a **draft** release with four assets:
+   - `Cloaker-x86_64.AppImage` — the Linux GUI, built on `ubuntu-22.04`
+   - `cloaker_cli-linux-x86_64` — the Linux CLI as a plain binary; a command line tool needs no
+     bundle
+   - `Cloaker-macos.zip` — `Cloaker.app`, universal (Intel and Apple Silicon merged with `lipo`),
+     archived with `ditto` because a bundle is a directory
+   - `cloaker_cli-macos` — the macOS CLI, also universal
+   - `Cloaker-windows.exe` — the Windows GUI
+   - `cloaker_cli-windows.exe` — the Windows CLI
+
+   The GUI and the CLI are listed separately on every platform rather than zipped together.
 4. Download the artifacts, run each one, then publish the draft.
 5. The README's download line points at the Releases page and needs no change per release.
 
@@ -46,11 +56,15 @@ Things the test suite cannot cover:
 - **Windows console output.** As a GUI-subsystem binary, `--help` and `--version` write to a console
   that isn't attached, so the text is dropped (the exit code is still 0). Harmless, but it means
   `cloaker --help` from cmd.exe prints nothing.
-- **macOS signing.** Unsigned and un-notarized, so Gatekeeper will complain on first run. Signing
-  needs a paid Apple developer account.
-- **AppImage portability.** linuxdeploy bundles no extra libraries (the AppImage is 7.4 MB), so it
-  relies on the host having libGL and libxkbcommon — true of any desktop, but worth testing on an
-  older distribution than the one it was built on.
+- **macOS signing.** What CI builds is unsigned and un-notarized, so Gatekeeper complains on first
+  run. The plan is to sign and notarize a local build and swap the asset in. Signing on its own
+  isn't enough for a download: it needs notarization and `xcrun stapler staple Cloaker.app`, and
+  the bundle has to be re-zipped with `ditto -c -k`, the way the workflow does it.
+- **AppImage portability.** linuxdeploy bundles no extra libraries (the AppImage is 7.4 MB): the
+  GUI links only libc, libm and libgcc, and reaches libGL, X11, Wayland and xkbcommon through
+  dlopen at runtime, which any desktop has. What the AppImage doesn't carry is glibc, so the
+  release job builds on `ubuntu-22.04`, the oldest runner on offer, to keep the floor at glibc
+  2.35. Building on `ubuntu-latest` would rule out Debian 12, RHEL 9 and Ubuntu 22.04.
 - **File associations.** `gui/assets/cloaker.desktop` declares `Exec=cloaker %f`, so "Open with"
   works once installed on Linux. macOS and Windows would need their own registration.
 
