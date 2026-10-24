@@ -669,7 +669,7 @@ dependencies = [
 
 [[package]]
 name = "cloaker"
-version = "5.0.0"
+version = "5.0.1"
 dependencies = [
  "argon2",
  "dryoc",
@@ -680,7 +680,7 @@ dependencies = [
 
 [[package]]
 name = "cloaker_gui"
-version = "5.0.0"
+version = "5.0.1"
 dependencies = [
  "cloaker",
  "eframe",

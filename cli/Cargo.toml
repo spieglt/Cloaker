@@ -1,6 +1,6 @@
 [package]
 name = "cloaker_cli"
-version = "5.0.0"
+version = "5.0.1"
 authors = ["Theron Spiegl <tspiegl@gmail.com>"]
 edition = "2021"
 

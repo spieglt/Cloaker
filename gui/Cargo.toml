@@ -1,6 +1,6 @@
 [package]
 name = "cloaker_gui"
-version = "5.0.0"
+version = "5.0.1"
 authors = ["Theron Spiegl <theron@spiegl.dev>"]
 edition = "2021"
 
