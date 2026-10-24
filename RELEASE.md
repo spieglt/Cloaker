@@ -60,11 +60,14 @@ Things the test suite cannot cover:
   run. The plan is to sign and notarize a local build and swap the asset in. Signing on its own
   isn't enough for a download: it needs notarization and `xcrun stapler staple Cloaker.app`, and
   the bundle has to be re-zipped with `ditto -c -k`, the way the workflow does it.
-- **AppImage portability.** linuxdeploy bundles no extra libraries (the AppImage is 7.4 MB): the
-  GUI links only libc, libm and libgcc, and reaches libGL, X11, Wayland and xkbcommon through
-  dlopen at runtime, which any desktop has. What the AppImage doesn't carry is glibc, so the
-  release job builds on `ubuntu-22.04`, the oldest runner on offer, to keep the floor at glibc
-  2.35. Building on `ubuntu-latest` would rule out Debian 12, RHEL 9 and Ubuntu 22.04.
+- **AppImage portability.** The GUI links only libc, libm and libgcc, and reaches libGL, X11,
+  Wayland and xkbcommon through dlopen at runtime, so linuxdeploy bundles nothing it isn't told
+  to. Most of those are on any desktop, but libxkbcommon-x11 isn't: v5.0.0 didn't bundle it and
+  panicked at startup on the AppImage catalog's Ubuntu 22.04 test machine
+  (AppImage/appimage.github.io#5648), so the release job now passes it to linuxdeploy with `-l`.
+  What the AppImage doesn't carry is glibc, so the release job builds on `ubuntu-22.04`, the
+  oldest runner on offer, to keep the floor at glibc 2.35, and fails if anything in the AppDir
+  needs newer. Building on `ubuntu-latest` would rule out Debian 12, RHEL 9 and Ubuntu 22.04.
 - **File associations.** `gui/assets/cloaker.desktop` declares `Exec=cloaker %f`, so "Open with"
   works once installed on Linux. macOS and Windows would need their own registration.
 

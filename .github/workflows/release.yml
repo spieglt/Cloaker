@@ -38,13 +38,15 @@ jobs:
             cli -> target
             gui -> target
 
+      # libxkbcommon-x11-0 isn't needed to build, only to bundle in the AppImage (see below)
       - name: Install Linux build dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y \
             libgl1-mesa-dev libxkbcommon-dev libwayland-dev \
-            libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev
+            libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev \
+            libxkbcommon-x11-0
 
       - name: Build
         if: runner.os != 'macOS'
@@ -78,6 +80,14 @@ jobs:
       # against that release's SHA-256 instead of taking whatever the moving "continuous" build
       # happens to be. To upgrade, change both values; GitHub lists each asset's digest on the
       # release page and in its API.
+      #
+      # The GUI links only libc, libm and libgcc and reaches everything else through dlopen, which
+      # linuxdeploy can't see, so libraries a desktop may lack have to be named with -l. winit
+      # panics at startup without libxkbcommon-x11.so.0 ("Library libxkbcommon-x11.so could not be
+      # loaded."), which an X11 system doesn't necessarily have: the AppImage catalog's Ubuntu 22.04
+      # test machine doesn't, and v5.0.0 failed there (AppImage/appimage.github.io#5648).
+      # linuxdeploy brings libxkbcommon.so.0 and libxcb-xkb.so.1 along with it, and the binary's
+      # $ORIGIN/../lib runpath finds them before the system's.
       - name: Package Linux artifacts
         if: runner.os == 'Linux'
         env:
@@ -90,7 +100,8 @@ jobs:
           chmod +x linuxdeploy
           cp gui/target/release/cloaker .
           cp gui/assets/icon.png cloaker.png
-          ./linuxdeploy --appdir AppDir -e cloaker -d gui/assets/cloaker.desktop -i cloaker.png --output appimage
+          ./linuxdeploy --appdir AppDir -e cloaker -d gui/assets/cloaker.desktop -i cloaker.png \
+            -l /usr/lib/x86_64-linux-gnu/libxkbcommon-x11.so.0 --output appimage
           mkdir -p dist
           mv Cloaker*.AppImage dist/Cloaker-x86_64.AppImage
           # the command line tool needs no bundle, so ship the binary as it is
@@ -98,6 +109,19 @@ jobs:
           # smoke test: both have to start and report their version without a display
           ./dist/Cloaker-x86_64.AppImage --version
           ./dist/cloaker_cli-linux-x86_64 --version
+
+      # The bundled libraries carry the build machine's glibc floor as well as our binary does, so
+      # this guards the reason for building on ubuntu-22.04 in case the runner is ever bumped.
+      - name: Check glibc requirement
+        if: runner.os == 'Linux'
+        run: |
+          newest=$( { find AppDir -type f -exec objdump -T {} + 2>/dev/null || true; } \
+            | grep -oE 'GLIBC_[0-9]+\.[0-9]+' | sed 's/GLIBC_//' | sort -Vu | tail -1)
+          echo "Newest glibc version required: $newest"
+          if [ "$(printf '%s\n' "$newest" 2.35 | sort -V | tail -1)" != 2.35 ]; then
+            echo "::error::The AppImage requires glibc $newest; it must run on Ubuntu 22.04's 2.35"
+            exit 1
+          fi
 
       - name: Package macOS app bundle
         if: runner.os == 'macOS'
