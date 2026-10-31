@@ -35,8 +35,35 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "Cloaker",
         options,
-        Box::new(move |_cc| Ok(Box::new(CloakerApp::new(initial_file.clone())))),
+        Box::new(move |_cc| {
+            #[cfg(target_os = "linux")]
+            follow_linux_theme(&_cc.egui_ctx);
+            Ok(Box::new(CloakerApp::new(initial_file.clone())))
+        }),
     )
+}
+
+// winit never reports the desktop theme on Linux and egui then falls back to dark, so ask
+// xdg-desktop-portal instead, and stay light where there is no portal.
+#[cfg(target_os = "linux")]
+fn follow_linux_theme(ctx: &egui::Context) {
+    fn apply(ctx: &egui::Context, mode: dark_light::Mode) {
+        ctx.set_theme(match mode {
+            dark_light::Mode::Dark => egui::Theme::Dark,
+            _ => egui::Theme::Light,
+        });
+    }
+    apply(ctx, dark_light::detect().unwrap_or(dark_light::Mode::Light));
+    let ctx = ctx.clone();
+    thread::spawn(move || {
+        let Ok(watcher) = dark_light::subscribe() else {
+            return;
+        };
+        for mode in watcher.iter() {
+            apply(&ctx, mode);
+            ctx.request_repaint();
+        }
+    });
 }
 
 // `cloaker somefile.txt` opens that file straight away, so the app can be used as the handler for

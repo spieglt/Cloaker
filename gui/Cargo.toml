@@ -23,3 +23,6 @@ egui_kittest = "0.36"
 
 [build-dependencies]
 winresource = "0.1.31"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+dark-light = "3.0.0"
